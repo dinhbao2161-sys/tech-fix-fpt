@@ -1,0 +1,6 @@
+{
+  "name": "TechCare - Cẩm Nang Sửa Chữa Thiết Bị Điện Tử",
+  "description": "Tra cứu và hướng dẫn xử lý lỗi thường gặp trên iPhone, Android, Windows và macOS với giao diện iOS hiện đại.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
