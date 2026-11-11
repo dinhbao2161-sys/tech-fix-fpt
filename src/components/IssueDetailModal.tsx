@@ -15,7 +15,6 @@ import {
   Monitor,
   Laptop,
   Cpu,
-  User,
   Share2
 } from 'lucide-react';
 import { Issue } from '../types/issue';
@@ -55,28 +54,29 @@ export const IssueDetailModal: React.FC<IssueDetailModalProps> = ({
   const progressPercent = Math.round((completedCount / issue.steps.length) * 100);
 
   const handleCopyGuide = () => {
-    const textContent = `[TechCare] HƯỚNG DẪN XỬ LÝ: ${issue.title}
-Thiết bị: ${issue.platform.toUpperCase()}
-Thời gian ước tính: ${issue.estimatedTime}
+    const textContent = `[TechCare Professional Archive]
+TIÊU ĐỀ: ${issue.title}
+NỀN TẢNG: ${issue.platform.toUpperCase()}
+THỜI GIAN DỰ KIẾN: ${issue.estimatedTime}
 
---- NGUYÊN NHÂN ---
+--- DẤU HIỆU & NGUYÊN NHÂN ---
 ${issue.causes.map((c, i) => `${i + 1}. ${c}`).join('\n')}
 
---- CÁC BƯỚC KHẮC PHỤC ---
+--- QUY TRÌNH KHẮC PHỤC CHI TIẾT ---
 ${issue.steps
   .map(
     (s) =>
-      `Bước ${s.stepNumber}: ${s.title}\n${s.instructions}${s.tip ? `\n* Mẹo: ${s.tip}` : ''}${
-        s.warning ? `\n! Lưu ý: ${s.warning}` : ''
+      `Bước ${s.stepNumber}: ${s.title}\n${s.instructions}${s.tip ? `\n* Mẹo kỹ thuật: ${s.tip}` : ''}${
+        s.warning ? `\n! Cảnh báo: ${s.warning}` : ''
       }`
   )
   .join('\n\n')}
 
-Được tổng hợp bởi TechCare - Cẩm nang sửa chữa thiết bị điện tử.`;
+Trích xuất từ Kho Kiến Thức Kỹ Thuật TechCare.`;
 
     navigator.clipboard.writeText(textContent).then(() => {
       setCopied(true);
-      onShowToast('Đã sao chép toàn bộ hướng dẫn vào bộ nhớ tạm!');
+      onShowToast('Đã sao chép quy trình kỹ thuật vào clipboard!');
       setTimeout(() => setCopied(false), 2000);
     });
   };
@@ -98,43 +98,43 @@ ${issue.steps
   const getPlatformIcon = (platform: string) => {
     switch (platform) {
       case 'iphone':
-        return <Smartphone className="w-5 h-5 text-slate-900 dark:text-slate-100" />;
+        return <Smartphone className="w-5 h-5 text-[#B8C7A1]" />;
       case 'android':
-        return <Smartphone className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />;
+        return <Smartphone className="w-5 h-5 text-[#A6B39B]" />;
       case 'windows':
-        return <Monitor className="w-5 h-5 text-blue-600 dark:text-blue-400" />;
+        return <Monitor className="w-5 h-5 text-[#B8C7A1]" />;
       case 'mac':
-        return <Laptop className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />;
+        return <Laptop className="w-5 h-5 text-[#A6B39B]" />;
       default:
-        return <Cpu className="w-5 h-5 text-amber-600 dark:text-amber-400" />;
+        return <Cpu className="w-5 h-5 text-[#B8C7A1]" />;
     }
   };
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-black/60 backdrop-blur-md flex items-end sm:items-center justify-center p-0 sm:p-4">
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-[#10110F]/85 flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-200">
       {/* Click outside backdrop */}
       <div className="fixed inset-0" onClick={onClose} aria-hidden="true" />
 
       {/* Modal / Sheet Container */}
       <div 
-        className="relative w-full max-w-3xl max-h-[92vh] sm:max-h-[85vh] bg-white dark:bg-slate-900 rounded-t-3xl sm:rounded-3xl shadow-2xl flex flex-col overflow-hidden border border-slate-200/80 dark:border-slate-800 z-10 animate-in fade-in slide-in-from-bottom duration-200"
+        className="relative w-full max-w-3xl max-h-[92vh] sm:max-h-[88vh] bg-[#171916] rounded-t-3xl sm:rounded-3xl shadow-2xl flex flex-col overflow-hidden border border-white/[0.12] z-10"
       >
-        {/* iOS Drag Handle on Mobile */}
-        <div className="sm:hidden pt-3 pb-1 flex justify-center">
-          <div className="w-12 h-1.5 rounded-full bg-slate-300 dark:bg-slate-700" />
+        {/* Mobile top handle */}
+        <div className="sm:hidden pt-3 pb-1 flex justify-center bg-[#171916]">
+          <div className="w-12 h-1.5 rounded-full bg-white/20" />
         </div>
 
         {/* Sticky Top Header */}
-        <div className="px-5 sm:px-7 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between gap-4 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md sticky top-0 z-20">
-          <div className="flex items-center gap-2.5 truncate">
-            <span className="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 shrink-0">
+        <div className="px-6 sm:px-8 py-4.5 border-b border-white/[0.08] flex items-center justify-between gap-4 bg-[#171916] sticky top-0 z-20">
+          <div className="flex items-center gap-3 truncate">
+            <span className="p-2.5 rounded-xl bg-[#1D211D] border border-white/[0.09] shrink-0">
               {getPlatformIcon(issue.platform)}
             </span>
             <div className="truncate">
-              <span className="text-xs font-semibold uppercase tracking-wider text-blue-600 dark:text-blue-400">
-                Hướng Dẫn Khắc Phục Lỗi
+              <span className="text-[11px] font-mono uppercase tracking-widest text-[#B8C7A1] font-semibold">
+                Quy Trình Khắc Phục Lỗi
               </span>
-              <h2 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white truncate">
+              <h2 className="text-sm sm:text-base font-bold text-[#F2F1EB] truncate font-['Manrope']">
                 {issue.title}
               </h2>
             </div>
@@ -144,91 +144,91 @@ ${issue.steps
             {/* Bookmark button */}
             <button
               onClick={onToggleBookmark}
-              className={`w-9 h-9 rounded-xl flex items-center justify-center transition-colors ${
+              className={`w-9 h-9 rounded-xl border flex items-center justify-center transition-colors ${
                 isBookmarked
-                  ? 'text-amber-500 bg-amber-50 dark:bg-amber-950/40'
-                  : 'text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800'
+                  ? 'text-[#B8C7A1] bg-[#B8C7A1]/15 border-[#B8C7A1]/30'
+                  : 'text-[#A2A69D] bg-[#1D211D] border-white/[0.08] hover:text-[#F2F1EB]'
               }`}
               title={isBookmarked ? 'Bỏ lưu' : 'Lưu lại'}
             >
-              <Bookmark className={`w-5 h-5 ${isBookmarked ? 'fill-current' : ''}`} />
+              <Bookmark className={`w-4 h-4 ${isBookmarked ? 'fill-current' : ''}`} />
             </button>
 
             {/* Share button */}
             <button
               onClick={handleShare}
-              className="w-9 h-9 rounded-xl flex items-center justify-center text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+              className="w-9 h-9 rounded-xl border border-white/[0.08] bg-[#1D211D] flex items-center justify-center text-[#A2A69D] hover:text-[#F2F1EB] transition-colors"
               title="Chia sẻ hướng dẫn"
             >
-              <Share2 className="w-5 h-5" />
+              <Share2 className="w-4 h-4" />
             </button>
 
             {/* Close button */}
             <button
               onClick={onClose}
-              className="w-9 h-9 rounded-full bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 flex items-center justify-center text-slate-600 dark:text-slate-300 transition-colors"
+              className="w-9 h-9 rounded-xl bg-[#1D211D] border border-white/[0.08] hover:bg-[#252b24] flex items-center justify-center text-[#A2A69D] hover:text-[#F2F1EB] transition-colors"
               aria-label="Đóng cửa sổ"
             >
-              <X className="w-5 h-5" />
+              <X className="w-4 h-4" />
             </button>
           </div>
         </div>
 
         {/* Scrollable Modal Body */}
-        <div className="overflow-y-auto px-5 sm:px-7 py-6 space-y-6">
+        <div className="overflow-y-auto px-6 sm:px-8 py-7 space-y-7">
           {/* Main Title & Summary */}
-          <div>
-            <h1 className="text-xl sm:text-2xl font-extrabold text-slate-900 dark:text-white leading-tight mb-2">
+          <div className="space-y-2.5">
+            <h1 className="text-xl sm:text-2xl font-bold text-[#F2F1EB] leading-tight font-['Manrope']">
               {issue.title}
             </h1>
-            <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
+            <p className="text-sm text-[#A2A69D] leading-relaxed font-normal">
               {issue.summary}
             </p>
           </div>
 
           {/* Quick Metrics Bar */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/60 dark:border-slate-800 text-xs">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-4 rounded-2xl bg-[#1D211D] border border-white/[0.08] text-xs">
             <div>
-              <span className="text-slate-400 block text-[11px]">Thời gian ước tính</span>
-              <span className="font-semibold text-slate-800 dark:text-slate-200 flex items-center gap-1 mt-0.5">
-                <Clock className="w-3.5 h-3.5 text-blue-500" />
+              <span className="text-[#A2A69D] block text-[11px] font-mono uppercase tracking-wider">Thời gian</span>
+              <span className="font-semibold text-[#F2F1EB] flex items-center gap-1.5 mt-1 font-mono">
+                <Clock className="w-3.5 h-3.5 text-[#B8C7A1]" />
                 {issue.estimatedTime}
               </span>
             </div>
             <div>
-              <span className="text-slate-400 block text-[11px]">Độ phức tạp</span>
-              <span className="font-semibold text-slate-800 dark:text-slate-200 mt-0.5 block">
-                {issue.severity === 'easy' ? 'Dễ xử lý' : issue.severity === 'medium' ? 'Vừa phải' : 'Nâng cao'}
+              <span className="text-[#A2A69D] block text-[11px] font-mono uppercase tracking-wider">Độ phức tạp</span>
+              <span className="font-semibold text-[#F2F1EB] mt-1 block">
+                {issue.severity === 'easy' ? 'Dễ xử lý' : issue.severity === 'medium' ? 'Trung bình' : 'Chuyên sâu'}
               </span>
             </div>
             <div>
-              <span className="text-slate-400 block text-[11px]">Số bước thực hiện</span>
-              <span className="font-semibold text-slate-800 dark:text-slate-200 mt-0.5 block">
-                {issue.steps.length} bước cụ thể
+              <span className="text-[#A2A69D] block text-[11px] font-mono uppercase tracking-wider">Số bước</span>
+              <span className="font-semibold text-[#F2F1EB] mt-1 block font-mono">
+                {issue.steps.length} bước chẩn đoán
               </span>
             </div>
             <div>
-              <span className="text-slate-400 block text-[11px]">Người chia sẻ</span>
-              <span className="font-semibold text-slate-800 dark:text-slate-200 truncate mt-0.5 block">
-                {issue.author || 'Chuyên gia TechCare'}
+              <span className="text-[#A2A69D] block text-[11px] font-mono uppercase tracking-wider">Tác giả</span>
+              <span className="font-semibold text-[#F2F1EB] truncate mt-1 block">
+                {issue.author || 'TechCare Engineering'}
               </span>
             </div>
           </div>
 
           {/* Progress Tracker Bar */}
-          <div className="p-3.5 rounded-2xl bg-blue-50/80 dark:bg-blue-950/30 border border-blue-200/60 dark:border-blue-900/40">
-            <div className="flex items-center justify-between text-xs mb-1.5 font-medium text-blue-900 dark:text-blue-200">
-              <span className="flex items-center gap-1.5">
-                <CheckCircle className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-                Tiến độ thực hiện của bạn:
+          <div className="p-4 rounded-2xl bg-[#1D211D] border border-white/[0.08] space-y-2">
+            <div className="flex items-center justify-between text-xs font-mono text-[#A2A69D]">
+              <span className="flex items-center gap-2 text-[#F2F1EB] font-medium">
+                <CheckCircle className="w-4 h-4 text-[#B8C7A1]" />
+                Tiến độ thực hiện:
               </span>
-              <span className="tabular-nums font-bold">
-                {completedCount}/{issue.steps.length} bước ({progressPercent}%)
+              <span className="font-bold text-[#B8C7A1] tabular-nums">
+                {completedCount} / {issue.steps.length} bước ({progressPercent}%)
               </span>
             </div>
-            <div className="w-full h-2 rounded-full bg-blue-200/60 dark:bg-blue-900/60 overflow-hidden">
+            <div className="w-full h-1.5 rounded-full bg-[#10110F] overflow-hidden border border-white/[0.05]">
               <div
-                className="h-full bg-blue-600 dark:bg-blue-500 rounded-full transition-all duration-300"
+                className="h-full bg-[#B8C7A1] rounded-full transition-all duration-300"
                 style={{ width: `${progressPercent}%` }}
               />
             </div>
@@ -238,15 +238,15 @@ ${issue.steps
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Symptoms */}
             {issue.symptoms && issue.symptoms.length > 0 && (
-              <div className="p-4 rounded-2xl bg-amber-50/60 dark:bg-amber-950/20 border border-amber-200/60 dark:border-amber-900/30">
-                <h3 className="text-xs font-bold uppercase tracking-wider text-amber-800 dark:text-amber-400 mb-2 flex items-center gap-1.5">
-                  <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400" />
-                  Dấu hiệu nhận biết
+              <div className="p-5 rounded-2xl bg-[#1D211D] border border-white/[0.08]">
+                <h3 className="text-xs font-mono font-bold uppercase tracking-widest text-[#E0C097] mb-3 flex items-center gap-2">
+                  <AlertTriangle className="w-4 h-4 text-[#E0C097]" />
+                  Dấu hiệu nhận diện
                 </h3>
-                <ul className="space-y-1.5 text-xs text-slate-700 dark:text-slate-300">
+                <ul className="space-y-2 text-xs text-[#A2A69D]">
                   {issue.symptoms.map((sym, idx) => (
-                    <li key={idx} className="flex items-start gap-2">
-                      <span className="text-amber-500 font-bold">•</span>
+                    <li key={idx} className="flex items-start gap-2.5">
+                      <span className="text-[#E0C097] font-bold">•</span>
                       <span>{sym}</span>
                     </li>
                   ))}
@@ -256,15 +256,15 @@ ${issue.steps
 
             {/* Causes */}
             {issue.causes && issue.causes.length > 0 && (
-              <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200/60 dark:border-slate-800">
-                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-2 flex items-center gap-1.5">
-                  <Lightbulb className="w-4 h-4 text-blue-500" />
-                  Nguyên nhân phổ biến
+              <div className="p-5 rounded-2xl bg-[#1D211D] border border-white/[0.08]">
+                <h3 className="text-xs font-mono font-bold uppercase tracking-widest text-[#B8C7A1] mb-3 flex items-center gap-2">
+                  <Lightbulb className="w-4 h-4 text-[#B8C7A1]" />
+                  Nguyên nhân cốt lõi
                 </h3>
-                <ul className="space-y-1.5 text-xs text-slate-700 dark:text-slate-300">
+                <ul className="space-y-2 text-xs text-[#A2A69D]">
                   {issue.causes.map((cause, idx) => (
-                    <li key={idx} className="flex items-start gap-2">
-                      <span className="text-blue-500 font-bold">•</span>
+                    <li key={idx} className="flex items-start gap-2.5">
+                      <span className="text-[#B8C7A1] font-bold">•</span>
                       <span>{cause}</span>
                     </li>
                   ))}
@@ -275,46 +275,46 @@ ${issue.steps
 
           {/* Required Tools */}
           {issue.requiredTools && issue.requiredTools.length > 0 && (
-            <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/30 border border-slate-200/50 dark:border-slate-800 flex items-center gap-2 text-xs text-slate-600 dark:text-slate-400">
-              <Wrench className="w-4 h-4 text-slate-400 shrink-0" />
-              <span className="font-semibold text-slate-700 dark:text-slate-300">Chuẩn bị:</span>
-              <span>{issue.requiredTools.join(' · ')}</span>
+            <div className="p-4 rounded-2xl bg-[#1D211D] border border-white/[0.08] flex items-center gap-3 text-xs text-[#A2A69D]">
+              <Wrench className="w-4 h-4 text-[#B8C7A1] shrink-0" />
+              <span className="font-mono uppercase tracking-wider text-[#F2F1EB]">Công cụ cần có:</span>
+              <span className="text-[#A2A69D]">{issue.requiredTools.join(' · ')}</span>
             </div>
           )}
 
           {/* STEP BY STEP RESOLUTION SECTION */}
-          <div>
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                <span>Các bước xử lý chi tiết</span>
-                <span className="text-xs font-normal text-slate-400">
-                  (Bấm vào từng bước để đánh dấu hoàn thành)
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm sm:text-base font-bold text-[#F2F1EB] font-['Manrope'] flex items-center gap-2">
+                <span>Quy trình xử lý từng bước</span>
+                <span className="text-xs font-normal text-[#A2A69D] hidden sm:inline">
+                  (Bấm vào từng bước để ghi nhận tiến độ)
                 </span>
               </h3>
 
               <button
                 onClick={handleCopyGuide}
-                className="text-xs font-medium text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1"
+                className="text-xs font-mono font-semibold text-[#B8C7A1] hover:underline flex items-center gap-1.5"
               >
-                {copied ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
-                <span>{copied ? 'Đã chép' : 'Chép hướng dẫn'}</span>
+                {copied ? <Check className="w-3.5 h-3.5 text-[#B8C7A1]" /> : <Copy className="w-3.5 h-3.5" />}
+                <span>{copied ? 'Đã sao chép' : 'Chép quy trình'}</span>
               </button>
             </div>
 
-            <div className="space-y-4">
+            <div className="space-y-3.5">
               {issue.steps.map((step) => {
                 const isDone = !!completedSteps[step.stepNumber];
                 return (
                   <div
                     key={step.stepNumber}
                     onClick={() => toggleStep(step.stepNumber)}
-                    className={`rounded-2xl p-4 sm:p-5 border transition-all cursor-pointer select-none ${
+                    className={`rounded-2xl p-5 border transition-all cursor-pointer select-none ${
                       isDone
-                        ? 'bg-emerald-50/50 dark:bg-emerald-950/20 border-emerald-300/80 dark:border-emerald-800/50'
-                        : 'bg-white dark:bg-slate-800/60 border-slate-200/80 dark:border-slate-800 hover:border-blue-300 dark:hover:border-blue-700 shadow-xs'
+                        ? 'bg-[#1D211D] border-[#B8C7A1]/50 shadow-inner'
+                        : 'bg-[#1D211D] border-white/[0.08] hover:border-white/[0.2] shadow-sm'
                     }`}
                   >
-                    <div className="flex items-start gap-3.5">
+                    <div className="flex items-start gap-4">
                       {/* Checkbox / Step Badge */}
                       <button
                         type="button"
@@ -322,10 +322,10 @@ ${issue.steps
                           e.stopPropagation();
                           toggleStep(step.stepNumber);
                         }}
-                        className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 mt-0.5 transition-colors ${
+                        className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 mt-0.5 transition-colors border font-mono ${
                           isDone
-                            ? 'bg-emerald-600 text-white'
-                            : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-blue-100 dark:hover:bg-blue-900/50'
+                            ? 'bg-[#B8C7A1] text-[#10110F] border-[#B8C7A1]'
+                            : 'bg-[#171916] text-[#A2A69D] border-white/[0.12] hover:border-[#B8C7A1]'
                         }`}
                         aria-label={`Đánh dấu bước ${step.stepNumber} ${isDone ? 'chưa hoàn thành' : 'đã hoàn thành'}`}
                       >
@@ -337,34 +337,34 @@ ${issue.steps
                       </button>
 
                       {/* Step Content */}
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1.5">
+                      <div className="flex-1 space-y-2">
+                        <div className="flex items-center gap-2">
                           <h4
-                            className={`text-sm sm:text-base font-bold transition-colors ${
+                            className={`text-sm sm:text-base font-bold transition-colors font-['Manrope'] ${
                               isDone
-                                ? 'text-emerald-800 dark:text-emerald-300 line-through'
-                                : 'text-slate-900 dark:text-white'
+                                ? 'text-[#B8C7A1] line-through'
+                                : 'text-[#F2F1EB]'
                             }`}
                           >
                             Bước {step.stepNumber}: {step.title}
                           </h4>
                           {isDone && (
-                            <span className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">
-                              (Đã làm)
+                            <span className="text-[10px] font-mono font-semibold uppercase px-1.5 py-0.5 rounded bg-[#B8C7A1]/15 text-[#B8C7A1]">
+                              Đã hoàn thành
                             </span>
                           )}
                         </div>
 
-                        <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed whitespace-pre-line">
+                        <p className="text-xs sm:text-sm text-[#A2A69D] leading-relaxed whitespace-pre-line font-normal">
                           {step.instructions}
                         </p>
 
                         {/* Tip Callout */}
                         {step.tip && (
-                          <div className="mt-3 p-3 rounded-xl bg-blue-50/80 dark:bg-blue-950/40 border border-blue-200/60 dark:border-blue-900/50 flex items-start gap-2 text-xs text-blue-900 dark:text-blue-200">
-                            <Lightbulb className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
+                          <div className="mt-3 p-3 rounded-xl bg-[#171916] border border-[#B8C7A1]/20 flex items-start gap-2.5 text-xs text-[#A6B39B]">
+                            <Lightbulb className="w-4 h-4 text-[#B8C7A1] shrink-0 mt-0.5" />
                             <div>
-                              <span className="font-semibold">Mẹo nhỏ: </span>
+                              <span className="font-semibold text-[#B8C7A1]">Mẹo kỹ thuật: </span>
                               <span>{step.tip}</span>
                             </div>
                           </div>
@@ -372,10 +372,10 @@ ${issue.steps
 
                         {/* Warning Callout */}
                         {step.warning && (
-                          <div className="mt-3 p-3 rounded-xl bg-rose-50/80 dark:bg-rose-950/40 border border-rose-200/60 dark:border-rose-900/50 flex items-start gap-2 text-xs text-rose-900 dark:text-rose-200">
-                            <AlertTriangle className="w-4 h-4 text-rose-600 dark:text-rose-400 shrink-0 mt-0.5" />
+                          <div className="mt-3 p-3 rounded-xl bg-[#171916] border border-[#E07A5F]/30 flex items-start gap-2.5 text-xs text-[#E07A5F]">
+                            <AlertTriangle className="w-4 h-4 text-[#E07A5F] shrink-0 mt-0.5" />
                             <div>
-                              <span className="font-semibold">Lưu ý quan trọng: </span>
+                              <span className="font-semibold">Lưu ý an toàn: </span>
                               <span>{step.warning}</span>
                             </div>
                           </div>
@@ -390,15 +390,15 @@ ${issue.steps
 
           {/* Reference Link if available */}
           {issue.sourceUrl && (
-            <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200/60 dark:border-slate-800 flex items-center justify-between text-xs">
-              <span className="text-slate-500">Nguồn thông tin tham khảo kỹ thuật:</span>
+            <div className="p-4 rounded-2xl bg-[#1D211D] border border-white/[0.08] flex items-center justify-between text-xs">
+              <span className="text-[#A2A69D]">Tài liệu tham khảo kỹ thuật:</span>
               <a
                 href={issue.sourceUrl}
                 target="_blank"
                 rel="noreferrer"
-                className="font-medium text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1"
+                className="font-mono font-semibold text-[#B8C7A1] hover:underline flex items-center gap-1.5"
               >
-                <span>Xem bài viết gốc</span>
+                <span>Xem tài liệu gốc</span>
                 <ExternalLink className="w-3.5 h-3.5" />
               </a>
             </div>
@@ -406,36 +406,36 @@ ${issue.steps
         </div>
 
         {/* Modal Sticky Bottom Action Footer */}
-        <div className="px-5 sm:px-7 py-3.5 border-t border-slate-100 dark:border-slate-800 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md flex items-center justify-between gap-3">
+        <div className="px-6 sm:px-8 py-4 border-t border-white/[0.08] bg-[#171916] flex items-center justify-between gap-3">
           {/* Helpful vote */}
           <button
             onClick={() => onVoteHelpful(issue.id)}
             disabled={hasVotedHelpful}
-            className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-medium flex items-center gap-1.5 transition-all ${
+            className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold flex items-center gap-2 transition-all border ${
               hasVotedHelpful
-                ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400 font-semibold'
-                : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-blue-50 dark:hover:bg-blue-950/40 hover:text-blue-600'
+                ? 'bg-[#B8C7A1]/15 text-[#B8C7A1] border-[#B8C7A1]/40'
+                : 'bg-[#1D211D] text-[#A2A69D] border-white/[0.08] hover:border-[#B8C7A1]/30 hover:text-[#F2F1EB]'
             }`}
           >
             <ThumbsUp className={`w-4 h-4 ${hasVotedHelpful ? 'fill-current' : ''}`} />
-            <span>{hasVotedHelpful ? 'Đã thấy hữu ích' : 'Hữu ích'}</span>
-            <span className="tabular-nums font-bold">({issue.helpfulCount + (hasVotedHelpful ? 1 : 0)})</span>
+            <span>{hasVotedHelpful ? 'Đã hữu ích' : 'Hữu ích'}</span>
+            <span className="font-mono font-bold">({issue.helpfulCount + (hasVotedHelpful ? 1 : 0)})</span>
           </button>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
             <button
               onClick={handleCopyGuide}
-              className="px-3.5 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-xs sm:text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors flex items-center gap-1.5"
+              className="px-4 py-2 rounded-xl border border-white/[0.09] bg-[#1D211D] text-[#A2A69D] hover:text-[#F2F1EB] text-xs sm:text-sm font-medium transition-colors flex items-center gap-1.5"
             >
-              {copied ? <Check className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4" />}
+              {copied ? <Check className="w-4 h-4 text-[#B8C7A1]" /> : <Copy className="w-4 h-4" />}
               <span className="hidden sm:inline">{copied ? 'Đã chép' : 'Sao chép'}</span>
             </button>
 
             <button
               onClick={onClose}
-              className="px-5 py-2 rounded-xl bg-slate-900 dark:bg-white text-white dark:text-slate-900 text-xs sm:text-sm font-semibold hover:bg-slate-800 dark:hover:bg-slate-100 transition-colors shadow-sm"
+              className="px-6 py-2 rounded-xl bg-[#B8C7A1] hover:bg-[#c7d5b1] text-[#10110F] text-xs sm:text-sm font-bold transition-all shadow-sm"
             >
-              Đã hiểu & Đóng
+              Đóng cửa sổ
             </button>
           </div>
         </div>

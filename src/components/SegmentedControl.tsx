@@ -25,20 +25,20 @@ interface SegmentedControlProps {
 const PLATFORMS: { id: Platform; label: string; icon: React.ReactNode }[] = [
   { id: 'all', label: 'Tất cả thiết bị', icon: <Layers className="w-4 h-4" /> },
   { id: 'iphone', label: 'iPhone / iOS', icon: <Smartphone className="w-4 h-4" /> },
-  { id: 'android', label: 'Android', icon: <Smartphone className="w-4 h-4" /> },
+  { id: 'android', label: 'Android OS', icon: <Smartphone className="w-4 h-4" /> },
   { id: 'windows', label: 'Windows PC', icon: <Monitor className="w-4 h-4" /> },
-  { id: 'mac', label: 'MacBook', icon: <Laptop className="w-4 h-4" /> },
+  { id: 'mac', label: 'macOS', icon: <Laptop className="w-4 h-4" /> },
   { id: 'hardware', label: 'Linh kiện', icon: <Cpu className="w-4 h-4" /> },
 ];
 
 const CATEGORIES: { id: Category; label: string; icon: React.ReactNode }[] = [
-  { id: 'all', label: 'Tất cả danh mục', icon: <Layers className="w-3.5 h-3.5" /> },
+  { id: 'all', label: 'Toàn bộ danh mục', icon: <Layers className="w-3.5 h-3.5" /> },
   { id: 'system', label: 'Hệ thống & Khởi động', icon: <Gauge className="w-3.5 h-3.5" /> },
   { id: 'screen', label: 'Màn hình & Cảm ứng', icon: <Monitor className="w-3.5 h-3.5" /> },
-  { id: 'battery', label: 'Pin & Sạc nguồn', icon: <BatteryCharging className="w-3.5 h-3.5" /> },
-  { id: 'network', label: 'Mạng, Wi-Fi & SIM', icon: <Wifi className="w-3.5 h-3.5" /> },
-  { id: 'security', label: 'Mật khẩu & Khóa máy', icon: <ShieldAlert className="w-3.5 h-3.5" /> },
-  { id: 'hardware', label: 'Phần cứng & Bo mạch', icon: <Cpu className="w-3.5 h-3.5" /> },
+  { id: 'battery', label: 'Nguồn & Tế bào pin', icon: <BatteryCharging className="w-3.5 h-3.5" /> },
+  { id: 'network', label: 'Mạng viễn thông & Wi-Fi', icon: <Wifi className="w-3.5 h-3.5" /> },
+  { id: 'security', label: 'Khóa bảo mật & Mật khẩu', icon: <ShieldAlert className="w-3.5 h-3.5" /> },
+  { id: 'hardware', label: 'Bo mạch & Chipset', icon: <Cpu className="w-3.5 h-3.5" /> },
 ];
 
 export const SegmentedControl: React.FC<SegmentedControlProps> = ({
@@ -52,8 +52,8 @@ export const SegmentedControl: React.FC<SegmentedControlProps> = ({
 }) => {
   return (
     <div className="w-full space-y-4">
-      {/* 1. iOS Primary Platform Segmented Switch */}
-      <div className="p-1 rounded-2xl bg-slate-200/60 dark:bg-slate-800/60 backdrop-blur-md flex items-center overflow-x-auto no-scrollbar gap-1 border border-slate-300/40 dark:border-slate-700/40 shadow-inner">
+      {/* 1. Primary Platform Segmented Bar (Dark Luxury Surface) */}
+      <div className="p-1.5 rounded-2xl bg-[#171916] border border-white/[0.09] shadow-md flex items-center overflow-x-auto no-scrollbar gap-1.5">
         {PLATFORMS.map((item) => {
           const isActive = platform === item.id;
           const count = platformCounts[item.id] || 0;
@@ -61,21 +61,21 @@ export const SegmentedControl: React.FC<SegmentedControlProps> = ({
             <button
               key={item.id}
               onClick={() => onChangePlatform(item.id)}
-              className={`flex-1 min-w-[130px] sm:min-w-0 py-2 px-3 rounded-xl text-xs sm:text-sm font-medium flex items-center justify-center gap-2 transition-all whitespace-nowrap ${
+              className={`flex-1 min-w-[130px] sm:min-w-0 py-2.5 px-3 rounded-xl text-xs sm:text-sm font-medium flex items-center justify-center gap-2.5 transition-all whitespace-nowrap border ${
                 isActive
-                  ? 'bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 shadow-sm font-semibold'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+                  ? 'bg-[#1D211D] text-[#F2F1EB] font-bold border-[#B8C7A1]/40 shadow-sm'
+                  : 'text-[#A2A69D] hover:text-[#F2F1EB] hover:bg-[#1D211D]/60 border-transparent'
               }`}
             >
-              <span className={isActive ? 'text-blue-600 dark:text-blue-400' : 'text-slate-400'}>
+              <span className={isActive ? 'text-[#B8C7A1]' : 'text-[#A2A69D]'}>
                 {item.icon}
               </span>
               <span>{item.label}</span>
               <span
-                className={`text-[10px] px-1.5 py-0.2 rounded-full tabular-nums font-semibold ${
+                className={`text-[10px] px-2 py-0.5 rounded font-mono font-bold tabular-nums ${
                   isActive
-                    ? 'bg-blue-100 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400'
-                    : 'bg-slate-300/50 dark:bg-slate-700/50 text-slate-500'
+                    ? 'bg-[#B8C7A1]/20 text-[#B8C7A1] border border-[#B8C7A1]/30'
+                    : 'bg-[#10110F] text-[#A2A69D] border border-white/[0.05]'
                 }`}
               >
                 {count}
@@ -87,21 +87,21 @@ export const SegmentedControl: React.FC<SegmentedControlProps> = ({
 
       {/* 2. Sub-filters: Categories and Severity */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        {/* Categories Scroller */}
-        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1">
+        {/* Categories Chips */}
+        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
           {CATEGORIES.map((cat) => {
             const isCatActive = category === cat.id;
             return (
               <button
                 key={cat.id}
                 onClick={() => onChangeCategory(cat.id)}
-                className={`px-3 py-1.5 rounded-xl text-xs font-medium flex items-center gap-1.5 whitespace-nowrap transition-all border ${
+                className={`px-3.5 py-1.5 rounded-xl text-xs font-medium flex items-center gap-1.5 whitespace-nowrap transition-all border ${
                   isCatActive
-                    ? 'bg-blue-500/10 border-blue-500/30 text-blue-600 dark:text-blue-400 font-semibold'
-                    : 'bg-transparent border-transparent text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+                    ? 'bg-[#B8C7A1]/15 border-[#B8C7A1]/40 text-[#B8C7A1] font-semibold'
+                    : 'bg-[#171916] text-[#A2A69D] border-white/[0.08] hover:border-white/[0.18] hover:text-[#F2F1EB] hover:bg-[#1D211D]'
                 }`}
               >
-                {cat.icon}
+                <span className={isCatActive ? 'text-[#B8C7A1]' : 'text-[#A2A69D]'}>{cat.icon}</span>
                 <span>{cat.label}</span>
               </button>
             );
@@ -109,24 +109,26 @@ export const SegmentedControl: React.FC<SegmentedControlProps> = ({
         </div>
 
         {/* Complexity/Severity Filter */}
-        <div className="flex items-center gap-1 shrink-0 self-end sm:self-auto text-xs">
-          <span className="text-slate-400 text-[11px] mr-1 hidden md:inline">Độ phức tạp:</span>
+        <div className="flex items-center gap-1.5 shrink-0 self-end sm:self-auto text-xs bg-[#171916] p-1 rounded-xl border border-white/[0.08]">
+          <span className="text-[#A2A69D] font-mono text-[10px] uppercase tracking-wider px-2 hidden md:inline">
+            Độ khó:
+          </span>
           {(['all', 'easy', 'medium', 'hard'] as const).map((sev) => {
             const isSevActive = severity === sev;
             const labelMap = {
-              all: 'Mọi mức',
-              easy: 'Dễ sửa',
-              medium: 'Vừa phải',
+              all: 'Tất cả',
+              easy: 'Dễ',
+              medium: 'Trung bình',
               hard: 'Nâng cao'
             };
             return (
               <button
                 key={sev}
                 onClick={() => onChangeSeverity(sev)}
-                className={`px-2.5 py-1 rounded-lg transition-all ${
+                className={`px-2.5 py-1 rounded-lg transition-all text-xs font-medium border ${
                   isSevActive
-                    ? 'bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 font-semibold shadow-xs'
-                    : 'text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+                    ? 'bg-[#1D211D] text-[#B8C7A1] border-[#B8C7A1]/40 font-semibold'
+                    : 'text-[#A2A69D] border-transparent hover:text-[#F2F1EB]'
                 }`}
               >
                 {labelMap[sev]}

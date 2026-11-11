@@ -1,13 +1,11 @@
 import React from 'react';
-import { Wrench, Plus, Sun, Moon, Bookmark, Sparkles } from 'lucide-react';
+import { Terminal, Plus, Bookmark, Compass } from 'lucide-react';
 import { Platform } from '../types/issue';
 
 interface HeaderProps {
   currentPlatform: Platform;
   onSelectPlatform: (platform: Platform) => void;
   onOpenAddModal: () => void;
-  isDarkMode: boolean;
-  onToggleDarkMode: () => void;
   bookmarkCount: number;
   showOnlyBookmarks: boolean;
   onToggleBookmarks: () => void;
@@ -17,139 +15,138 @@ export const Header: React.FC<HeaderProps> = ({
   currentPlatform,
   onSelectPlatform,
   onOpenAddModal,
-  isDarkMode,
-  onToggleDarkMode,
   bookmarkCount,
   showOnlyBookmarks,
   onToggleBookmarks,
 }) => {
   return (
-    <header className="sticky top-0 z-30 w-full ios-glass border-b border-black/5 dark:border-white/10 transition-colors">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-8">
-        {/* Zone 1: Brand Wordmark */}
+    <header className="sticky top-0 z-40 w-full bg-[#10110F]/95 border-b border-white/[0.09] transition-colors">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-18 flex items-center justify-between gap-8">
+        {/* Zone 1: Brand Wordmark (Dark Luxury Tech Editorial) */}
         <button
           onClick={() => {
             onSelectPlatform('all');
             if (showOnlyBookmarks) onToggleBookmarks();
           }}
-          className="flex items-center gap-2.5 text-left group transition-transform active:scale-[0.98]"
+          className="flex items-center gap-3 text-left group transition-opacity hover:opacity-90"
         >
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-blue-600 via-indigo-600 to-cyan-500 flex items-center justify-center text-white shadow-md shadow-blue-500/20 group-hover:shadow-blue-500/30 transition-shadow">
-            <Wrench className="w-5 h-5" />
+          <div className="w-10 h-10 rounded-xl bg-[#171916] border border-white/[0.12] flex items-center justify-center text-[#B8C7A1] group-hover:border-[#B8C7A1]/40 transition-colors shadow-inner">
+            <Terminal className="w-5 h-5 stroke-[1.8]" />
           </div>
           <div>
-            <div className="flex items-center gap-1.5">
-              <span className="text-lg font-bold tracking-tight text-slate-900 dark:text-white">
+            <div className="flex items-center gap-2">
+              <span className="text-lg font-bold tracking-tight text-[#F2F1EB] font-['Manrope']">
                 TechCare
               </span>
-              <span className="text-[10px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded-md bg-blue-500/10 text-blue-600 dark:text-blue-400">
-                iOS Style
+              <span className="text-[10px] tracking-widest uppercase font-mono text-[#B8C7A1] px-1.5 py-0.5 rounded bg-[#B8C7A1]/10 border border-[#B8C7A1]/20">
+                PRO
               </span>
             </div>
-            <p className="text-[11px] text-slate-500 dark:text-slate-400 hidden sm:block">
-              Cẩm nang xử lý sự cố thiết bị
+            <p className="text-[11px] text-[#A2A69D] hidden sm:block tracking-wide">
+              Hệ thống chẩn đoán & cẩm nang kỹ thuật
             </p>
           </div>
         </button>
 
-        {/* Zone 2: Navigation Links (Single-line, clean text links) */}
-        <nav className="hidden lg:flex items-center gap-6 text-sm font-medium text-slate-600 dark:text-slate-300">
+        {/* Zone 2: Navigation Links (Clean Editorial Line) */}
+        <nav className="hidden lg:flex items-center gap-8 text-xs uppercase tracking-widest font-semibold text-[#A2A69D]">
           <button
             onClick={() => onSelectPlatform('all')}
-            className={`transition-colors whitespace-nowrap hover:text-blue-600 dark:hover:text-blue-400 ${
+            className={`py-1.5 relative transition-colors whitespace-nowrap hover:text-[#F2F1EB] ${
               currentPlatform === 'all' && !showOnlyBookmarks
-                ? 'text-blue-600 dark:text-blue-400 font-semibold'
+                ? 'text-[#B8C7A1]'
                 : ''
             }`}
           >
             Tất cả thiết bị
+            {currentPlatform === 'all' && !showOnlyBookmarks && (
+              <span className="absolute bottom-0 left-0 right-0 h-[2px] bg-[#B8C7A1] rounded-full" />
+            )}
           </button>
           <button
             onClick={() => onSelectPlatform('iphone')}
-            className={`transition-colors whitespace-nowrap hover:text-blue-600 dark:hover:text-blue-400 ${
+            className={`py-1.5 relative transition-colors whitespace-nowrap hover:text-[#F2F1EB] ${
               currentPlatform === 'iphone'
-                ? 'text-blue-600 dark:text-blue-400 font-semibold'
+                ? 'text-[#B8C7A1]'
                 : ''
             }`}
           >
             iPhone & iOS
+            {currentPlatform === 'iphone' && (
+              <span className="absolute bottom-0 left-0 right-0 h-[2px] bg-[#B8C7A1] rounded-full" />
+            )}
           </button>
           <button
             onClick={() => onSelectPlatform('android')}
-            className={`transition-colors whitespace-nowrap hover:text-blue-600 dark:hover:text-blue-400 ${
+            className={`py-1.5 relative transition-colors whitespace-nowrap hover:text-[#F2F1EB] ${
               currentPlatform === 'android'
-                ? 'text-blue-600 dark:text-blue-400 font-semibold'
+                ? 'text-[#B8C7A1]'
                 : ''
             }`}
           >
             Android
+            {currentPlatform === 'android' && (
+              <span className="absolute bottom-0 left-0 right-0 h-[2px] bg-[#B8C7A1] rounded-full" />
+            )}
           </button>
           <button
             onClick={() => onSelectPlatform('windows')}
-            className={`transition-colors whitespace-nowrap hover:text-blue-600 dark:hover:text-blue-400 ${
+            className={`py-1.5 relative transition-colors whitespace-nowrap hover:text-[#F2F1EB] ${
               currentPlatform === 'windows'
-                ? 'text-blue-600 dark:text-blue-400 font-semibold'
+                ? 'text-[#B8C7A1]'
                 : ''
             }`}
           >
             Windows PC
+            {currentPlatform === 'windows' && (
+              <span className="absolute bottom-0 left-0 right-0 h-[2px] bg-[#B8C7A1] rounded-full" />
+            )}
           </button>
           <button
             onClick={() => onSelectPlatform('mac')}
-            className={`transition-colors whitespace-nowrap hover:text-blue-600 dark:hover:text-blue-400 ${
+            className={`py-1.5 relative transition-colors whitespace-nowrap hover:text-[#F2F1EB] ${
               currentPlatform === 'mac'
-                ? 'text-blue-600 dark:text-blue-400 font-semibold'
+                ? 'text-[#B8C7A1]'
                 : ''
             }`}
           >
-            MacBook
+            macOS
+            {currentPlatform === 'mac' && (
+              <span className="absolute bottom-0 left-0 right-0 h-[2px] bg-[#B8C7A1] rounded-full" />
+            )}
           </button>
         </nav>
 
-        {/* Zone 3: Actions (Bookmarks, Theme toggle, Primary CTA button) */}
-        <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-          {/* Bookmark Toggle */}
+        {/* Zone 3: Actions (Saved articles + Luxury CTA Button) */}
+        <div className="flex items-center gap-3 shrink-0">
+          {/* Saved Articles Toggle */}
           <button
             onClick={onToggleBookmarks}
-            className={`h-9 px-2.5 sm:px-3 rounded-xl flex items-center gap-1.5 text-xs font-medium transition-all ${
+            className={`h-9 px-3 rounded-xl flex items-center gap-2 text-xs font-medium transition-all border ${
               showOnlyBookmarks
-                ? 'bg-amber-500 text-white shadow-sm'
-                : 'text-slate-600 dark:text-slate-300 hover:bg-black/5 dark:hover:bg-white/10'
+                ? 'bg-[#B8C7A1]/15 text-[#B8C7A1] border-[#B8C7A1]/40'
+                : 'bg-[#171916] text-[#A2A69D] border-white/[0.09] hover:text-[#F2F1EB] hover:border-white/[0.18]'
             }`}
-            title="Đã lưu yêu thích"
-            aria-label="Danh sách đã lưu"
+            title="Mục đã lưu trữ"
+            aria-label="Danh sách mục đã lưu"
           >
-            <Bookmark className={`w-4 h-4 ${showOnlyBookmarks ? 'fill-current' : ''}`} />
+            <Bookmark className={`w-3.5 h-3.5 ${showOnlyBookmarks ? 'fill-current text-[#B8C7A1]' : ''}`} />
             <span className="hidden sm:inline">Đã lưu</span>
             {bookmarkCount > 0 && (
-              <span
-                className={`text-[10px] px-1.5 py-0.2 rounded-full tabular-nums font-bold ${
-                  showOnlyBookmarks
-                    ? 'bg-white text-amber-600'
-                    : 'bg-amber-100 dark:bg-amber-950/80 text-amber-700 dark:text-amber-300'
-                }`}
-              >
+              <span className="text-[10px] px-1.5 py-0.2 rounded font-mono font-bold bg-[#B8C7A1]/20 text-[#B8C7A1]">
                 {bookmarkCount}
               </span>
             )}
           </button>
 
-          {/* Dark Mode Toggle */}
-          <button
-            onClick={onToggleDarkMode}
-            className="w-9 h-9 rounded-xl flex items-center justify-center text-slate-600 dark:text-slate-300 hover:bg-black/5 dark:hover:bg-white/10 transition-colors"
-            aria-label={isDarkMode ? 'Chuyển sang chế độ sáng' : 'Chuyển sang chế độ tối'}
-          >
-            {isDarkMode ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4" />}
-          </button>
-
-          {/* Primary Action Button */}
+          {/* Luxury CTA Button */}
           <button
             onClick={onOpenAddModal}
-            className="h-9 px-3 sm:px-4 rounded-xl bg-blue-600 hover:bg-blue-700 active:scale-[0.98] text-white text-xs sm:text-sm font-medium flex items-center gap-1.5 shadow-md shadow-blue-600/20 transition-all whitespace-nowrap"
+            className="h-9 px-4 rounded-xl bg-[#B8C7A1] hover:bg-[#c7d5b1] active:scale-[0.98] text-[#10110F] text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm tracking-wide"
           >
-            <Plus className="w-4 h-4" />
-            <span>Thêm lỗi & Cách fix</span>
+            <Plus className="w-4 h-4 stroke-[2.5]" />
+            <span className="hidden sm:inline">Đóng góp giải pháp</span>
+            <span className="sm:hidden">Thêm</span>
           </button>
         </div>
       </div>

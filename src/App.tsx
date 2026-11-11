@@ -5,18 +5,17 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { 
-  Wrench, 
+  Terminal, 
   Plus, 
-  Smartphone, 
-  Monitor, 
-  Laptop, 
-  Cpu, 
-  HelpCircle,
-  Sparkles,
+  Bookmark, 
   Search,
+  Activity,
   CheckCircle2,
-  Bookmark,
-  Share2
+  Cpu,
+  Layers,
+  ShieldCheck,
+  Zap,
+  ArrowUpRight
 } from 'lucide-react';
 import { Issue, Platform, Category, Severity } from './types/issue';
 import { DEFAULT_ISSUES } from './data/defaultIssues';
@@ -76,28 +75,6 @@ export default function App() {
   const [selectedIssue, setSelectedIssue] = useState<Issue | null>(null);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
-
-  // 5. Dark Mode
-  const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
-    try {
-      const saved = localStorage.getItem('techcare_theme');
-      if (saved) return saved === 'dark';
-      return window.matchMedia('(prefers-color-scheme: dark)').matches;
-    } catch {
-      return false;
-    }
-  });
-
-  // Sync dark mode class on document.documentElement
-  useEffect(() => {
-    if (isDarkMode) {
-      document.documentElement.classList.add('dark');
-      localStorage.setItem('techcare_theme', 'dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-      localStorage.setItem('techcare_theme', 'light');
-    }
-  }, [isDarkMode]);
 
   // Sync bookmarks
   useEffect(() => {
@@ -162,10 +139,10 @@ export default function App() {
     setBookmarkedIds((prev) => {
       const exists = prev.includes(id);
       if (exists) {
-        showToast('Đã bỏ lưu bài viết khỏi danh sách yêu thích.');
+        showToast('Đã gỡ bài viết khỏi danh sách lưu trữ.');
         return prev.filter((item) => item !== id);
       } else {
-        showToast('Đã lưu bài viết vào danh sách yêu thích!');
+        showToast('Đã lưu bài viết vào kho lưu trữ cá nhân.');
         return [...prev, id];
       }
     });
@@ -177,12 +154,12 @@ export default function App() {
     setIssues((prev) =>
       prev.map((item) => (item.id === id ? { ...item, helpfulCount: item.helpfulCount + 1 } : item))
     );
-    showToast('Cảm ơn bạn đã phản hồi! Đánh giá đã được ghi nhận.');
+    showToast('Đánh giá hữu ích đã được ghi nhận.');
   };
 
   const handleAddIssue = (newIssue: Issue) => {
     setIssues((prev) => [newIssue, ...prev]);
-    showToast('Đã đăng tải thành công mẹo xử lý lỗi của bạn!');
+    showToast('Đã xuất bản thành công giải pháp mới vào hệ thống.');
     setSelectedPlatform(newIssue.platform);
     setSelectedCategory('all');
     setSelectedIssue(newIssue);
@@ -197,7 +174,10 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-100/90 dark:bg-slate-950 text-slate-900 dark:text-slate-100 selection:bg-blue-500 selection:text-white transition-colors duration-200">
+    <div className="min-h-screen bg-[#10110F] text-[#F2F1EB] selection:bg-[#B8C7A1] selection:text-[#10110F] font-['Manrope'] transition-colors">
+      {/* Subtle sage ambient lighting at the very top */}
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[350px] luxury-sage-ambient pointer-events-none" />
+
       {/* Dynamic Toast */}
       <Toast message={toastMessage} onClose={() => setToastMessage(null)} />
 
@@ -209,50 +189,93 @@ export default function App() {
           if (showOnlyBookmarks) setShowOnlyBookmarks(false);
         }}
         onOpenAddModal={() => setIsAddModalOpen(true)}
-        isDarkMode={isDarkMode}
-        onToggleDarkMode={() => setIsDarkMode((prev) => !prev)}
         bookmarkCount={bookmarkedIds.length}
         showOnlyBookmarks={showOnlyBookmarks}
         onToggleBookmarks={() => setShowOnlyBookmarks((prev) => !prev)}
       />
 
       {/* Main Container */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
-        {/* Hero Section with iOS Cupertino Blur */}
-        <div className="relative rounded-3xl overflow-hidden p-6 sm:p-10 ios-glass border border-white/60 dark:border-white/10 shadow-lg">
-          {/* Subtle background ambient gradients */}
-          <div className="absolute -top-24 -right-24 w-80 h-80 bg-blue-500/15 rounded-full blur-3xl pointer-events-none" />
-          <div className="absolute -bottom-24 -left-24 w-80 h-80 bg-indigo-500/15 rounded-full blur-3xl pointer-events-none" />
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-10 relative z-10">
+        {/* Hero Section: Dark Luxury Editorial & Asymmetric Layout */}
+        <section className="relative rounded-3xl p-7 sm:p-12 bg-[#171916] border border-white/[0.09] shadow-2xl overflow-hidden">
+          {/* Subtle tech grid background */}
+          <div className="absolute inset-0 luxury-grid-bg opacity-40 pointer-events-none" />
 
-          <div className="relative z-10 max-w-3xl space-y-4">
-            <div className="flex items-center gap-2">
-              <span className="p-1 rounded-md bg-blue-500 text-white">
-                <Wrench className="w-3.5 h-3.5" />
-              </span>
-              <span className="text-xs font-bold uppercase tracking-wider text-blue-600 dark:text-blue-400">
-                Cẩm Nang Khắc Phục Sự Cố Thiết Bị Toàn Diện
-              </span>
+          <div className="relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+            {/* Left Column (8 cols): Editorial Typography & Search */}
+            <div className="lg:col-span-8 space-y-6">
+              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#1D211D] border border-white/[0.09]">
+                <span className="w-2 h-2 rounded-full bg-[#B8C7A1]" />
+                <span className="text-[11px] font-mono uppercase tracking-widest text-[#B8C7A1] font-semibold">
+                  Hệ Thống Chẩn Đoán Kỹ Thuật Độc Lập
+                </span>
+              </div>
+
+              <h1 className="text-3xl sm:text-5xl font-extrabold tracking-tight text-[#F2F1EB] leading-[1.15] font-['Manrope']">
+                Kho tri thức giải pháp sửa chữa & chẩn đoán thiết bị
+              </h1>
+
+              <p className="text-sm sm:text-base text-[#A2A69D] leading-relaxed max-w-2xl font-normal">
+                Hệ thống tổng hợp chuẩn xác các quy trình xử lý sự cố phần cứng và hệ điều hành: Windows màn hình xanh (BSOD), điện thoại Android bị treo đơ, mở khóa mật khẩu iPhone, kiểm tra linh kiện chính hãng và tối ưu hiệu suất.
+              </p>
+
+              {/* Search Bar */}
+              <div className="pt-2">
+                <SearchBar
+                  value={searchQuery}
+                  onChange={setSearchQuery}
+                  resultCount={filteredIssues.length}
+                  totalCount={issues.length}
+                />
+              </div>
             </div>
 
-            <h1 className="text-2xl sm:text-4xl font-extrabold tracking-tight text-slate-900 dark:text-white leading-tight">
-              Tra cứu giải pháp sửa lỗi iPhone, Android & Windows
-            </h1>
+            {/* Right Column (4 cols): Luxury Tech Metrics Strip (Asymmetric Editorial) */}
+            <div className="lg:col-span-4 flex flex-col gap-3.5 border-t lg:border-t-0 lg:border-l border-white/[0.09] pt-6 lg:pt-0 lg:pl-8">
+              <div className="p-4 rounded-2xl bg-[#1D211D] border border-white/[0.08] flex items-center justify-between">
+                <div>
+                  <span className="text-[11px] font-mono text-[#A2A69D] uppercase tracking-wider block">
+                    Quy trình kiểm định
+                  </span>
+                  <span className="text-2xl font-bold font-mono text-[#F2F1EB] mt-0.5 block tabular-nums">
+                    {issues.length} Đề Mục
+                  </span>
+                </div>
+                <div className="w-10 h-10 rounded-xl bg-[#171916] border border-white/[0.08] flex items-center justify-center text-[#B8C7A1]">
+                  <Cpu className="w-5 h-5 stroke-[1.8]" />
+                </div>
+              </div>
 
-            <p className="text-sm sm:text-base text-slate-600 dark:text-slate-300 leading-relaxed">
-              Tổng hợp chi tiết các bước xử lý lỗi thường gặp như Windows màn hình xanh (BSOD), điện thoại Android bị treo đơ, quên mật khẩu iPhone, kiểm tra linh kiện chính hãng, lỗi mất âm thanh và Wi-Fi.
-            </p>
+              <div className="p-4 rounded-2xl bg-[#1D211D] border border-white/[0.08] flex items-center justify-between">
+                <div>
+                  <span className="text-[11px] font-mono text-[#A2A69D] uppercase tracking-wider block">
+                    Tiêu chuẩn kỹ thuật
+                  </span>
+                  <span className="text-2xl font-bold font-mono text-[#B8C7A1] mt-0.5 block tabular-nums">
+                    100% Chính Xác
+                  </span>
+                </div>
+                <div className="w-10 h-10 rounded-xl bg-[#171916] border border-white/[0.08] flex items-center justify-center text-[#B8C7A1]">
+                  <ShieldCheck className="w-5 h-5 stroke-[1.8]" />
+                </div>
+              </div>
 
-            {/* Search Bar */}
-            <div className="pt-2">
-              <SearchBar
-                value={searchQuery}
-                onChange={setSearchQuery}
-                resultCount={filteredIssues.length}
-                totalCount={issues.length}
-              />
+              <div className="p-4 rounded-2xl bg-[#1D211D] border border-white/[0.08] flex items-center justify-between">
+                <div>
+                  <span className="text-[11px] font-mono text-[#A2A69D] uppercase tracking-wider block">
+                    Nền tảng hỗ trợ
+                  </span>
+                  <span className="text-sm font-bold text-[#F2F1EB] mt-1 block">
+                    iOS · Android · Windows · Mac
+                  </span>
+                </div>
+                <div className="w-10 h-10 rounded-xl bg-[#171916] border border-white/[0.08] flex items-center justify-center text-[#B8C7A1]">
+                  <Layers className="w-5 h-5 stroke-[1.8]" />
+                </div>
+              </div>
             </div>
           </div>
-        </div>
+        </section>
 
         {/* Filter Controls (Segmented Control + Category Chips) */}
         <section aria-label="Bộ lọc thiết bị và danh mục">
@@ -269,26 +292,26 @@ export default function App() {
 
         {/* Bookmark filter active indicator banner */}
         {showOnlyBookmarks && (
-          <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-between gap-4">
-            <div className="flex items-center gap-2 text-xs sm:text-sm font-medium text-amber-900 dark:text-amber-200">
-              <Bookmark className="w-4 h-4 fill-current text-amber-500" />
+          <div className="p-4 rounded-2xl bg-[#171916] border border-[#B8C7A1]/40 flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3 text-xs sm:text-sm font-medium text-[#F2F1EB]">
+              <Bookmark className="w-4 h-4 fill-current text-[#B8C7A1]" />
               <span>
-                Đang hiển thị {filteredIssues.length} bài viết bạn đã lưu vào mục yêu thích.
+                Đang lọc hiển thị {filteredIssues.length} quy trình kỹ thuật bạn đã lưu trữ cá nhân.
               </span>
             </div>
             <button
               onClick={() => setShowOnlyBookmarks(false)}
-              className="text-xs font-semibold text-amber-700 dark:text-amber-300 hover:underline shrink-0"
+              className="text-xs font-mono font-semibold text-[#B8C7A1] hover:underline shrink-0"
             >
-              Hiện tất cả bài viết
+              Hiện tất cả đề mục
             </button>
           </div>
         )}
 
-        {/* Results Grid ("những lỗi sẽ được phân luồng ra thành từng ô một") */}
+        {/* Results Grid (Dark Luxury Tech Cards) */}
         <section aria-label="Danh sách các lỗi và giải pháp">
           {filteredIssues.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {filteredIssues.map((issue) => (
                 <IssueCard
                   key={issue.id}
@@ -301,36 +324,52 @@ export default function App() {
             </div>
           ) : (
             /* Empty State */
-            <div className="rounded-3xl p-12 text-center ios-glass border border-slate-200/80 dark:border-slate-800 space-y-4">
-              <div className="w-14 h-14 rounded-2xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center mx-auto text-slate-400">
-                <Search className="w-7 h-7" />
+            <div className="rounded-3xl p-14 text-center bg-[#171916] border border-white/[0.09] space-y-5">
+              <div className="w-14 h-14 rounded-2xl bg-[#1D211D] border border-white/[0.08] flex items-center justify-center mx-auto text-[#B8C7A1]">
+                <Search className="w-6 h-6" />
               </div>
-              <div className="max-w-md mx-auto">
-                <h3 className="text-base font-bold text-slate-900 dark:text-white">
-                  Không tìm thấy lỗi phù hợp
+              <div className="max-w-md mx-auto space-y-1.5">
+                <h3 className="text-base font-bold text-[#F2F1EB] font-['Manrope']">
+                  Không tìm thấy đề mục tương ứng
                 </h3>
-                <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
-                  Không có kết quả nào khớp với từ khóa "{searchQuery}" trong bộ lọc hiện tại. Hãy thử tìm với từ khóa khác hoặc đóng góp mẹo mới!
+                <p className="text-xs sm:text-sm text-[#A2A69D] leading-relaxed">
+                  Không có kết quả nào khớp với cụm từ "{searchQuery}" trong bộ lọc hiện thời. Bạn có thể xóa bộ lọc hoặc trực tiếp đóng góp giải pháp mới.
                 </p>
               </div>
               <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
                 <button
                   onClick={handleResetFilters}
-                  className="px-4 py-2 rounded-xl bg-slate-200/80 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-semibold hover:bg-slate-300 transition-colors"
+                  className="px-4 py-2.5 rounded-xl bg-[#1D211D] border border-white/[0.09] text-[#A2A69D] hover:text-[#F2F1EB] text-xs font-mono font-medium transition-colors"
                 >
-                  Xóa tất cả bộ lọc
+                  Xóa bộ lọc tìm kiếm
                 </button>
                 <button
                   onClick={() => setIsAddModalOpen(true)}
-                  className="px-4 py-2 rounded-xl bg-blue-600 text-white text-xs font-semibold hover:bg-blue-700 transition-colors flex items-center gap-1.5"
+                  className="px-5 py-2.5 rounded-xl bg-[#B8C7A1] text-[#10110F] text-xs font-bold hover:bg-[#c7d5b1] transition-all flex items-center gap-1.5"
                 >
-                  <Plus className="w-3.5 h-3.5" />
-                  Đóng góp lỗi & cách fix
+                  <Plus className="w-4 h-4 stroke-[2.5]" />
+                  Đóng góp giải pháp mới
                 </button>
               </div>
             </div>
           )}
         </section>
+
+        {/* Editorial Architecture Footer */}
+        <footer className="pt-10 pb-6 border-t border-white/[0.08] flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-[#A2A69D]">
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-[#B8C7A1]" />
+            <span className="font-mono text-[11px] uppercase tracking-wider text-[#F2F1EB]">
+              TechCare Engineering Knowledge Base
+            </span>
+            <span className="text-white/20">/</span>
+            <span>Phiên bản Dark Luxury Editorial</span>
+          </div>
+
+          <div className="font-mono text-[11px] text-[#A2A69D]/80">
+            Dữ liệu kỹ thuật chuẩn đoán độc lập · Bản quyền 2026
+          </div>
+        </footer>
       </main>
 
       {/* Detail Modal */}

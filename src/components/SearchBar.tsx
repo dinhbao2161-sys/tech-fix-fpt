@@ -33,58 +33,63 @@ export const SearchBar: React.FC<SearchBarProps> = ({
   };
 
   return (
-    <div className="w-full space-y-3">
-      {/* iOS search input capsule */}
+    <div className="w-full space-y-4">
+      {/* Dark Luxury Elevated Search Input */}
       <div className="relative group">
-        <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400 dark:text-slate-500 group-focus-within:text-blue-500 transition-colors">
-          <Search className="w-5 h-5" />
-        </div>
+        <div className="luxury-search rounded-2xl flex items-center h-14 pl-5 pr-4 transition-all">
+          <div className="flex items-center pointer-events-none text-[#B8C7A1] mr-3.5">
+            <Search className="w-5 h-5 stroke-[1.8]" />
+          </div>
 
-        <input
-          ref={inputRef}
-          type="text"
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          placeholder="Tìm kiếm lỗi thiết bị... (ví dụ: màn hình xanh, quên mật khẩu, treo máy, check pin...)"
-          className="w-full h-12 pl-11 pr-24 rounded-2xl bg-white/80 dark:bg-slate-900/80 border border-slate-200/80 dark:border-slate-800 focus:border-blue-500 dark:focus:border-blue-400 focus:ring-4 focus:ring-blue-500/10 text-sm text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 transition-all outline-none shadow-sm backdrop-blur-md"
-        />
+          <input
+            ref={inputRef}
+            type="text"
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            placeholder="Tra cứu sự cố kỹ thuật... (ví dụ: màn hình xanh, quên mật khẩu, treo máy, check pin...)"
+            className="w-full bg-transparent text-sm sm:text-base text-[#F2F1EB] placeholder:text-[#A2A69D]/70 outline-none font-normal font-['Manrope']"
+          />
 
-        <div className="absolute inset-y-0 right-0 pr-2.5 flex items-center gap-1.5">
-          {value && (
-            <button
-              onClick={handleClear}
-              className="w-7 h-7 rounded-full bg-slate-200/80 dark:bg-slate-700/80 hover:bg-slate-300 dark:hover:bg-slate-600 flex items-center justify-center text-slate-600 dark:text-slate-300 transition-colors"
-              aria-label="Xóa nội dung tìm kiếm"
-            >
-              <X className="w-3.5 h-3.5" />
-            </button>
-          )}
+          <div className="flex items-center gap-2.5 shrink-0 ml-2">
+            {value && (
+              <button
+                onClick={handleClear}
+                className="w-7 h-7 rounded-lg bg-[#1D211D] hover:bg-[#252a25] border border-white/[0.09] flex items-center justify-center text-[#A2A69D] hover:text-[#F2F1EB] transition-colors"
+                aria-label="Xóa nội dung tìm kiếm"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
 
-          <div className="hidden sm:flex items-center text-[11px] font-medium text-slate-400 dark:text-slate-500 px-2 py-1 rounded-md bg-slate-100/80 dark:bg-slate-800/80 tabular-nums">
-            {resultCount}/{totalCount} mục
+            <div className="hidden sm:flex items-center text-xs font-mono font-medium text-[#B8C7A1] px-3 py-1 rounded-lg bg-[#1D211D] border border-white/[0.09] tabular-nums">
+              {resultCount} / {totalCount} sự cố
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Quick Search Chips */}
+      {/* Quick Search Chips - Minimalist Tech Editorial Tags */}
       <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar text-xs">
-        <span className="text-slate-400 dark:text-slate-500 flex items-center gap-1 shrink-0 pl-1">
-          <Sparkles className="w-3.5 h-3.5 text-blue-500" />
-          <span>Gợi ý:</span>
+        <span className="text-[#A2A69D] font-mono text-[11px] uppercase tracking-wider flex items-center gap-1.5 shrink-0 pl-1">
+          <Sparkles className="w-3 h-3 text-[#B8C7A1]" />
+          <span>Truy cập nhanh:</span>
         </span>
-        {QUICK_SUGGESTIONS.map((tag) => (
-          <button
-            key={tag}
-            onClick={() => onChange(tag)}
-            className={`px-3 py-1 rounded-full whitespace-nowrap transition-all border ${
-              value.toLowerCase() === tag.toLowerCase()
-                ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
-                : 'bg-white/60 dark:bg-slate-800/60 border-slate-200/60 dark:border-slate-700/60 text-slate-600 dark:text-slate-300 hover:bg-blue-50 dark:hover:bg-blue-950/40 hover:border-blue-200 dark:hover:border-blue-800'
-            }`}
-          >
-            {tag}
-          </button>
-        ))}
+        {QUICK_SUGGESTIONS.map((tag) => {
+          const isSelected = value.toLowerCase() === tag.toLowerCase();
+          return (
+            <button
+              key={tag}
+              onClick={() => onChange(tag)}
+              className={`px-3 py-1.5 rounded-xl whitespace-nowrap transition-all text-xs font-medium border ${
+                isSelected
+                  ? 'bg-[#B8C7A1]/20 border-[#B8C7A1]/60 text-[#B8C7A1] font-semibold'
+                  : 'bg-[#171916] text-[#A2A69D] border-white/[0.08] hover:border-[#B8C7A1]/35 hover:text-[#F2F1EB] hover:bg-[#1D211D]'
+              }`}
+            >
+              {tag}
+            </button>
+          );
+        })}
       </div>
     </div>
   );

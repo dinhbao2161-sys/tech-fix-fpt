@@ -3,13 +3,8 @@ import {
   X, 
   Plus, 
   Trash2, 
-  Wrench, 
   Sparkles, 
-  AlertCircle,
-  Smartphone,
-  Monitor,
-  Laptop,
-  Cpu
+  AlertCircle
 } from 'lucide-react';
 import { Issue, StepGuide } from '../types/issue';
 import { validateIssueForm } from '../utils/filterIssues';
@@ -38,7 +33,7 @@ export const AddIssueModal: React.FC<AddIssueModalProps> = ({
   const [symptoms, setSymptoms] = useState<string[]>(['']);
   const [causes, setCauses] = useState<string[]>(['']);
   const [steps, setSteps] = useState<{ title: string; instructions: string; tip: string; warning: string }[]>([
-    { title: 'Kiểm tra sơ bộ', instructions: '', tip: '', warning: '' },
+    { title: 'Chẩn đoán sơ bộ', instructions: '', tip: '', warning: '' },
     { title: 'Thao tác khắc phục', instructions: '', tip: '', warning: '' }
   ]);
 
@@ -122,7 +117,7 @@ export const AddIssueModal: React.FC<AddIssueModalProps> = ({
         ? requiredTools.split(',').map((t) => t.trim()).filter(Boolean)
         : undefined,
       tags: [platform, category, title.toLowerCase().slice(0, 15)],
-      author: author.trim() || 'Thành viên cộng đồng',
+      author: author.trim() || 'Kỹ thuật viên cộng đồng',
       createdAt: new Date().toISOString().split('T')[0],
       helpfulCount: 1,
       isUserSubmitted: true,
@@ -133,59 +128,59 @@ export const AddIssueModal: React.FC<AddIssueModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-black/60 backdrop-blur-md flex items-end sm:items-center justify-center p-0 sm:p-4">
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-[#10110F]/85 flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-200">
       <div className="fixed inset-0" onClick={onClose} aria-hidden="true" />
 
-      <div className="relative w-full max-w-3xl max-h-[92vh] sm:max-h-[85vh] bg-white dark:bg-slate-900 rounded-t-3xl sm:rounded-3xl shadow-2xl flex flex-col overflow-hidden border border-slate-200/80 dark:border-slate-800 z-10 animate-in fade-in slide-in-from-bottom duration-200">
-        {/* iOS Drag Handle */}
-        <div className="sm:hidden pt-3 pb-1 flex justify-center">
-          <div className="w-12 h-1.5 rounded-full bg-slate-300 dark:bg-slate-700" />
+      <div className="relative w-full max-w-3xl max-h-[92vh] sm:max-h-[88vh] bg-[#171916] rounded-t-3xl sm:rounded-3xl shadow-2xl flex flex-col overflow-hidden border border-white/[0.12] z-10">
+        {/* Mobile Drag Handle */}
+        <div className="sm:hidden pt-3 pb-1 flex justify-center bg-[#171916]">
+          <div className="w-12 h-1.5 rounded-full bg-white/20" />
         </div>
 
         {/* Modal Header */}
-        <div className="px-5 sm:px-7 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between gap-4 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md sticky top-0 z-20">
-          <div className="flex items-center gap-2">
-            <span className="p-2 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400">
+        <div className="px-6 sm:px-8 py-4.5 border-b border-white/[0.08] flex items-center justify-between gap-4 bg-[#171916] sticky top-0 z-20">
+          <div className="flex items-center gap-3">
+            <span className="p-2.5 rounded-xl bg-[#1D211D] border border-white/[0.09] text-[#B8C7A1]">
               <Sparkles className="w-5 h-5" />
             </span>
             <div>
-              <h2 className="text-base font-bold text-slate-900 dark:text-white">
-                Đóng góp Lỗi & Cách Khắc Phục
+              <h2 className="text-base font-bold text-[#F2F1EB] font-['Manrope']">
+                Đóng Góp Giải Pháp Kỹ Thuật
               </h2>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
-                Chia sẻ mẹo xử lý sự cố thiết bị hữu ích đến cộng đồng
+              <p className="text-xs text-[#A2A69D]">
+                Mở rộng kho kiến thức chẩn đoán sự cố cho cộng đồng
               </p>
             </div>
           </div>
 
           <button
             onClick={onClose}
-            className="w-9 h-9 rounded-full bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 flex items-center justify-center text-slate-600 dark:text-slate-300 transition-colors"
+            className="w-9 h-9 rounded-xl bg-[#1D211D] border border-white/[0.08] hover:bg-[#252b24] flex items-center justify-center text-[#A2A69D] hover:text-[#F2F1EB] transition-colors"
           >
-            <X className="w-5 h-5" />
+            <X className="w-4 h-4" />
           </button>
         </div>
 
         {/* Form Body */}
-        <form onSubmit={handleSubmit} className="overflow-y-auto px-5 sm:px-7 py-6 space-y-6">
+        <form onSubmit={handleSubmit} className="overflow-y-auto px-6 sm:px-8 py-7 space-y-6">
           {/* Title */}
           <div>
-            <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1.5">
-              Tiêu đề sự cố <span className="text-rose-500">*</span>
+            <label className="block text-xs font-mono font-bold uppercase tracking-wider text-[#A2A69D] mb-2">
+              Tiêu đề sự cố / Lỗi kỹ thuật <span className="text-[#E07A5F]">*</span>
             </label>
             <input
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="Ví dụ: Cách khắc phục iPhone sạc không vào pin báo phụ kiện không hỗ trợ"
-              className={`w-full px-4 py-2.5 rounded-xl border text-sm bg-slate-50 dark:bg-slate-800/80 text-slate-900 dark:text-white outline-none transition-all ${
+              className={`w-full px-4 py-3 rounded-xl border text-sm bg-[#1D211D] text-[#F2F1EB] placeholder:text-[#A2A69D]/60 outline-none transition-all ${
                 errors.title
-                  ? 'border-rose-500 ring-2 ring-rose-500/10'
-                  : 'border-slate-200 dark:border-slate-700 focus:border-blue-500'
+                  ? 'border-[#E07A5F] ring-1 ring-[#E07A5F]/20'
+                  : 'border-white/[0.09] focus:border-[#B8C7A1]'
               }`}
             />
             {errors.title && (
-              <p className="text-xs text-rose-500 mt-1 flex items-center gap-1">
+              <p className="text-xs text-[#E07A5F] mt-1.5 flex items-center gap-1 font-mono">
                 <AlertCircle className="w-3.5 h-3.5" />
                 {errors.title}
               </p>
@@ -195,37 +190,37 @@ export const AddIssueModal: React.FC<AddIssueModalProps> = ({
           {/* Platform & Category Grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1.5">
-                Thiết bị / Nền tảng
+              <label className="block text-xs font-mono font-bold uppercase tracking-wider text-[#A2A69D] mb-2">
+                Nền tảng thiết bị
               </label>
               <select
                 value={platform}
                 onChange={(e) => setPlatform(e.target.value as any)}
-                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-sm bg-slate-50 dark:bg-slate-800/80 text-slate-900 dark:text-white outline-none focus:border-blue-500"
+                className="w-full px-4 py-3 rounded-xl border border-white/[0.09] text-sm bg-[#1D211D] text-[#F2F1EB] outline-none focus:border-[#B8C7A1]"
               >
                 <option value="iphone">iPhone / iOS</option>
                 <option value="android">Android (Samsung, Xiaomi, OPPO...)</option>
                 <option value="windows">Windows PC / Laptop</option>
                 <option value="mac">MacBook / macOS</option>
-                <option value="hardware">Linh kiện & Phần cứng chung</option>
+                <option value="hardware">Phần cứng & Bo mạch</option>
               </select>
             </div>
 
             <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1.5">
-                Chuyên mục lỗi
+              <label className="block text-xs font-mono font-bold uppercase tracking-wider text-[#A2A69D] mb-2">
+                Chuyên mục sự cố
               </label>
               <select
                 value={category}
                 onChange={(e) => setCategory(e.target.value as any)}
-                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-sm bg-slate-50 dark:bg-slate-800/80 text-slate-900 dark:text-white outline-none focus:border-blue-500"
+                className="w-full px-4 py-3 rounded-xl border border-white/[0.09] text-sm bg-[#1D211D] text-[#F2F1EB] outline-none focus:border-[#B8C7A1]"
               >
                 <option value="system">Hệ thống & Khởi động</option>
                 <option value="screen">Màn hình & Cảm ứng</option>
-                <option value="battery">Pin & Sạc nguồn</option>
-                <option value="network">Mạng, Wi-Fi & SIM</option>
-                <option value="security">Mật khẩu & Bảo mật</option>
-                <option value="hardware">Linh kiện & Phần cứng</option>
+                <option value="battery">Nguồn & Tế bào pin</option>
+                <option value="network">Mạng viễn thông & Wi-Fi</option>
+                <option value="security">Khóa bảo mật & Mật khẩu</option>
+                <option value="hardware">Bo mạch & Chipset</option>
               </select>
             </div>
           </div>
@@ -233,65 +228,65 @@ export const AddIssueModal: React.FC<AddIssueModalProps> = ({
           {/* Severity & Estimated Time */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1.5">
-                Độ phức tạp
+              <label className="block text-xs font-mono font-bold uppercase tracking-wider text-[#A2A69D] mb-2">
+                Mức độ phức tạp
               </label>
               <select
                 value={severity}
                 onChange={(e) => setSeverity(e.target.value as any)}
-                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-sm bg-slate-50 dark:bg-slate-800/80 text-slate-900 dark:text-white outline-none focus:border-blue-500"
+                className="w-full px-4 py-3 rounded-xl border border-white/[0.09] text-sm bg-[#1D211D] text-[#F2F1EB] outline-none focus:border-[#B8C7A1]"
               >
-                <option value="easy">Dễ xử lý (Người dùng tự làm)</option>
-                <option value="medium">Vừa phải (Cần chú ý)</option>
-                <option value="hard">Nâng cao (Cần cẩn thận)</option>
+                <option value="easy">Dễ xử lý (Tự thao tác)</option>
+                <option value="medium">Trung bình (Cần cẩn thận)</option>
+                <option value="hard">Chuyên sâu (Kỹ thuật cao)</option>
               </select>
             </div>
 
             <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1.5">
-                Thời gian xử lý
+              <label className="block text-xs font-mono font-bold uppercase tracking-wider text-[#A2A69D] mb-2">
+                Thời gian dự kiến
               </label>
               <input
                 type="text"
                 value={estimatedTime}
                 onChange={(e) => setEstimatedTime(e.target.value)}
                 placeholder="Ví dụ: 5 phút, 15 phút"
-                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-sm bg-slate-50 dark:bg-slate-800/80 text-slate-900 dark:text-white outline-none focus:border-blue-500"
+                className="w-full px-4 py-3 rounded-xl border border-white/[0.09] text-sm bg-[#1D211D] text-[#F2F1EB] placeholder:text-[#A2A69D]/60 outline-none focus:border-[#B8C7A1]"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1.5">
-                Tên người chia sẻ
+              <label className="block text-xs font-mono font-bold uppercase tracking-wider text-[#A2A69D] mb-2">
+                Tên kỹ thuật viên
               </label>
               <input
                 type="text"
                 value={author}
                 onChange={(e) => setAuthor(e.target.value)}
-                placeholder="Tên của bạn hoặc Biệt danh"
-                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-sm bg-slate-50 dark:bg-slate-800/80 text-slate-900 dark:text-white outline-none focus:border-blue-500"
+                placeholder="Họ tên hoặc bí danh"
+                className="w-full px-4 py-3 rounded-xl border border-white/[0.09] text-sm bg-[#1D211D] text-[#F2F1EB] placeholder:text-[#A2A69D]/60 outline-none focus:border-[#B8C7A1]"
               />
             </div>
           </div>
 
           {/* Summary */}
           <div>
-            <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1.5">
-              Mô tả tóm tắt sự cố <span className="text-rose-500">*</span>
+            <label className="block text-xs font-mono font-bold uppercase tracking-wider text-[#A2A69D] mb-2">
+              Tóm tắt sự cố <span className="text-[#E07A5F]">*</span>
             </label>
             <textarea
               rows={2}
               value={summary}
               onChange={(e) => setSummary(e.target.value)}
-              placeholder="Tóm tắt ngắn 1-2 câu về biểu hiện và cách khắc phục chính..."
-              className={`w-full px-4 py-2.5 rounded-xl border text-sm bg-slate-50 dark:bg-slate-800/80 text-slate-900 dark:text-white outline-none transition-all ${
+              placeholder="Tóm tắt ngắn gọn triệu chứng và hướng khắc phục..."
+              className={`w-full px-4 py-3 rounded-xl border text-sm bg-[#1D211D] text-[#F2F1EB] placeholder:text-[#A2A69D]/60 outline-none transition-all ${
                 errors.summary
-                  ? 'border-rose-500 ring-2 ring-rose-500/10'
-                  : 'border-slate-200 dark:border-slate-700 focus:border-blue-500'
+                  ? 'border-[#E07A5F] ring-1 ring-[#E07A5F]/20'
+                  : 'border-white/[0.09] focus:border-[#B8C7A1]'
               }`}
             />
             {errors.summary && (
-              <p className="text-xs text-rose-500 mt-1 flex items-center gap-1">
+              <p className="text-xs text-[#E07A5F] mt-1.5 flex items-center gap-1 font-mono">
                 <AlertCircle className="w-3.5 h-3.5" />
                 {errors.summary}
               </p>
@@ -301,15 +296,15 @@ export const AddIssueModal: React.FC<AddIssueModalProps> = ({
           {/* Symptoms List */}
           <div>
             <div className="flex items-center justify-between mb-2">
-              <label className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
+              <label className="text-xs font-mono font-bold uppercase tracking-wider text-[#A2A69D]">
                 Dấu hiệu nhận biết
               </label>
               <button
                 type="button"
                 onClick={handleAddSymptom}
-                className="text-xs font-medium text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1"
+                className="text-xs font-mono text-[#B8C7A1] hover:underline flex items-center gap-1"
               >
-                <Plus className="w-3.5 h-3.5" />
+                <Plus className="w-3 h-3" />
                 Thêm dấu hiệu
               </button>
             </div>
@@ -320,14 +315,14 @@ export const AddIssueModal: React.FC<AddIssueModalProps> = ({
                     type="text"
                     value={sym}
                     onChange={(e) => handleSymptomChange(idx, e.target.value)}
-                    placeholder={`Dấu hiệu ${idx + 1} (ví dụ: máy nóng lên, loa rè...)`}
-                    className="flex-1 px-3.5 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-xs sm:text-sm bg-slate-50 dark:bg-slate-800/80 text-slate-900 dark:text-white outline-none focus:border-blue-500"
+                    placeholder={`Dấu hiệu ${idx + 1}`}
+                    className="flex-1 px-4 py-2.5 rounded-xl border border-white/[0.09] text-xs sm:text-sm bg-[#1D211D] text-[#F2F1EB] placeholder:text-[#A2A69D]/60 outline-none focus:border-[#B8C7A1]"
                   />
                   {symptoms.length > 1 && (
                     <button
                       type="button"
                       onClick={() => handleRemoveSymptom(idx)}
-                      className="p-2 text-slate-400 hover:text-rose-500"
+                      className="p-2 text-[#A2A69D] hover:text-[#E07A5F]"
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
@@ -340,15 +335,15 @@ export const AddIssueModal: React.FC<AddIssueModalProps> = ({
           {/* Causes List */}
           <div>
             <div className="flex items-center justify-between mb-2">
-              <label className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
-                Nguyên nhân gây ra <span className="text-rose-500">*</span>
+              <label className="text-xs font-mono font-bold uppercase tracking-wider text-[#A2A69D]">
+                Nguyên nhân cốt lõi <span className="text-[#E07A5F]">*</span>
               </label>
               <button
                 type="button"
                 onClick={handleAddCause}
-                className="text-xs font-medium text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1"
+                className="text-xs font-mono text-[#B8C7A1] hover:underline flex items-center gap-1"
               >
-                <Plus className="w-3.5 h-3.5" />
+                <Plus className="w-3 h-3" />
                 Thêm nguyên nhân
               </button>
             </div>
@@ -359,14 +354,14 @@ export const AddIssueModal: React.FC<AddIssueModalProps> = ({
                     type="text"
                     value={cause}
                     onChange={(e) => handleCauseChange(idx, e.target.value)}
-                    placeholder={`Nguyên nhân ${idx + 1} (ví dụ: củ sạc kém chất lượng, driver xung đột...)`}
-                    className="flex-1 px-3.5 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-xs sm:text-sm bg-slate-50 dark:bg-slate-800/80 text-slate-900 dark:text-white outline-none focus:border-blue-500"
+                    placeholder={`Nguyên nhân ${idx + 1}`}
+                    className="flex-1 px-4 py-2.5 rounded-xl border border-white/[0.09] text-xs sm:text-sm bg-[#1D211D] text-[#F2F1EB] placeholder:text-[#A2A69D]/60 outline-none focus:border-[#B8C7A1]"
                   />
                   {causes.length > 1 && (
                     <button
                       type="button"
                       onClick={() => handleRemoveCause(idx)}
-                      className="p-2 text-slate-400 hover:text-rose-500"
+                      className="p-2 text-[#A2A69D] hover:text-[#E07A5F]"
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
@@ -375,7 +370,7 @@ export const AddIssueModal: React.FC<AddIssueModalProps> = ({
               ))}
             </div>
             {errors.causes && (
-              <p className="text-xs text-rose-500 mt-1 flex items-center gap-1">
+              <p className="text-xs text-[#E07A5F] mt-1.5 flex items-center gap-1 font-mono">
                 <AlertCircle className="w-3.5 h-3.5" />
                 {errors.causes}
               </p>
@@ -385,15 +380,15 @@ export const AddIssueModal: React.FC<AddIssueModalProps> = ({
           {/* Steps List */}
           <div>
             <div className="flex items-center justify-between mb-3">
-              <label className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
-                Các bước khắc phục cụ thể <span className="text-rose-500">*</span>
+              <label className="text-xs font-mono font-bold uppercase tracking-wider text-[#A2A69D]">
+                Quy trình các bước chẩn đoán <span className="text-[#E07A5F]">*</span>
               </label>
               <button
                 type="button"
                 onClick={handleAddStep}
-                className="text-xs font-medium text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1"
+                className="text-xs font-mono text-[#B8C7A1] hover:underline flex items-center gap-1"
               >
-                <Plus className="w-3.5 h-3.5" />
+                <Plus className="w-3 h-3" />
                 Thêm bước tiếp theo
               </button>
             </div>
@@ -402,20 +397,20 @@ export const AddIssueModal: React.FC<AddIssueModalProps> = ({
               {steps.map((st, idx) => (
                 <div
                   key={idx}
-                  className="p-4 rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/40 space-y-3"
+                  className="p-5 rounded-2xl border border-white/[0.08] bg-[#1D211D] space-y-3"
                 >
                   <div className="flex items-center justify-between gap-2">
-                    <span className="text-xs font-bold text-blue-600 dark:text-blue-400">
+                    <span className="text-xs font-mono font-bold text-[#B8C7A1]">
                       Bước {idx + 1}
                     </span>
                     {steps.length > 1 && (
                       <button
                         type="button"
                         onClick={() => handleRemoveStep(idx)}
-                        className="text-xs text-slate-400 hover:text-rose-500 flex items-center gap-1"
+                        className="text-xs text-[#A2A69D] hover:text-[#E07A5F] flex items-center gap-1 font-mono"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
-                        Xóa bước này
+                        Xóa bước
                       </button>
                     )}
                   </div>
@@ -424,39 +419,39 @@ export const AddIssueModal: React.FC<AddIssueModalProps> = ({
                     type="text"
                     value={st.title}
                     onChange={(e) => handleStepChange(idx, 'title', e.target.value)}
-                    placeholder="Tiêu đề bước (ví dụ: Khởi động lại cưỡng bức máy)"
-                    className="w-full px-3.5 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-xs sm:text-sm bg-white dark:bg-slate-900 text-slate-900 dark:text-white outline-none focus:border-blue-500 font-medium"
+                    placeholder="Tiêu đề bước (ví dụ: Reset tổ hợp phím cứng)"
+                    className="w-full px-4 py-2.5 rounded-xl border border-white/[0.09] text-xs sm:text-sm bg-[#171916] text-[#F2F1EB] placeholder:text-[#A2A69D]/60 outline-none focus:border-[#B8C7A1] font-medium"
                   />
 
                   <textarea
                     rows={2}
                     value={st.instructions}
                     onChange={(e) => handleStepChange(idx, 'instructions', e.target.value)}
-                    placeholder="Hướng dẫn chi tiết từng thao tác bấm phím hoặc cài đặt..."
-                    className="w-full px-3.5 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-xs sm:text-sm bg-white dark:bg-slate-900 text-slate-900 dark:text-white outline-none focus:border-blue-500"
+                    placeholder="Mô tả kỹ thuật chi tiết thao tác thực hiện..."
+                    className="w-full px-4 py-2.5 rounded-xl border border-white/[0.09] text-xs sm:text-sm bg-[#171916] text-[#F2F1EB] placeholder:text-[#A2A69D]/60 outline-none focus:border-[#B8C7A1]"
                   />
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                     <input
                       type="text"
                       value={st.tip}
                       onChange={(e) => handleStepChange(idx, 'tip', e.target.value)}
                       placeholder="Mẹo nhỏ hữu ích (tùy chọn)"
-                      className="px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 text-xs bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 outline-none"
+                      className="px-3.5 py-2 rounded-lg border border-white/[0.08] text-xs bg-[#171916] text-[#F2F1EB] placeholder:text-[#A2A69D]/60 outline-none"
                     />
                     <input
                       type="text"
                       value={st.warning}
                       onChange={(e) => handleStepChange(idx, 'warning', e.target.value)}
                       placeholder="Lưu ý an toàn (tùy chọn)"
-                      className="px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 text-xs bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 outline-none"
+                      className="px-3.5 py-2 rounded-lg border border-white/[0.08] text-xs bg-[#171916] text-[#F2F1EB] placeholder:text-[#A2A69D]/60 outline-none"
                     />
                   </div>
                 </div>
               ))}
             </div>
             {errors.steps && (
-              <p className="text-xs text-rose-500 mt-1 flex items-center gap-1">
+              <p className="text-xs text-[#E07A5F] mt-1.5 flex items-center gap-1 font-mono">
                 <AlertCircle className="w-3.5 h-3.5" />
                 {errors.steps}
               </p>
@@ -465,32 +460,32 @@ export const AddIssueModal: React.FC<AddIssueModalProps> = ({
 
           {/* Tools required */}
           <div>
-            <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1.5">
-              Dụng cụ chuẩn bị (nếu có)
+            <label className="block text-xs font-mono font-bold uppercase tracking-wider text-[#A2A69D] mb-2">
+              Dụng cụ thiết bị cần chuẩn bị (tùy chọn)
             </label>
             <input
               type="text"
               value={requiredTools}
               onChange={(e) => setRequiredTools(e.target.value)}
-              placeholder="Cách nhau bằng dấu phẩy, ví dụ: Cáp sạc chính hãng, Máy tính, Gôm tẩy"
-              className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-sm bg-slate-50 dark:bg-slate-800/80 text-slate-900 dark:text-white outline-none focus:border-blue-500"
+              placeholder="Ngăn cách bằng dấu phẩy: Cáp sạc chính hãng, Máy tính, Tua vít T5"
+              className="w-full px-4 py-3 rounded-xl border border-white/[0.09] text-sm bg-[#1D211D] text-[#F2F1EB] placeholder:text-[#A2A69D]/60 outline-none focus:border-[#B8C7A1]"
             />
           </div>
 
           {/* Bottom Action */}
-          <div className="pt-3 pb-3 border-t border-slate-200 dark:border-slate-800 flex items-center justify-end gap-3 sticky bottom-0 bg-white dark:bg-slate-900 z-20 shadow-lg">
+          <div className="pt-4 border-t border-white/[0.08] flex items-center justify-end gap-3 sticky bottom-0 bg-[#171916] py-3 z-20">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+              className="px-4 py-2.5 rounded-xl border border-white/[0.09] text-[#A2A69D] hover:text-[#F2F1EB] text-xs font-semibold hover:bg-[#1D211D] transition-colors"
             >
               Hủy bỏ
             </button>
             <button
               type="submit"
-              className="px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold shadow-md shadow-blue-500/20 active:scale-[0.98] transition-all"
+              className="px-6 py-2.5 rounded-xl bg-[#B8C7A1] hover:bg-[#c7d5b1] text-[#10110F] text-xs font-bold tracking-wide transition-all shadow-sm active:scale-[0.98]"
             >
-              Lưu & Đăng tải mẹo
+              Lưu & Xuất bản giải pháp
             </button>
           </div>
         </form>
