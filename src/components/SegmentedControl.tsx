@@ -28,7 +28,6 @@ const PLATFORMS: { id: Platform; label: string; icon: React.ReactNode }[] = [
   { id: 'android', label: 'Android OS', icon: <Smartphone className="w-4 h-4" /> },
   { id: 'windows', label: 'Windows PC', icon: <Monitor className="w-4 h-4" /> },
   { id: 'mac', label: 'macOS', icon: <Laptop className="w-4 h-4" /> },
-  { id: 'hardware', label: 'Linh kiện', icon: <Cpu className="w-4 h-4" /> },
 ];
 
 const CATEGORIES: { id: Category; label: string; icon: React.ReactNode }[] = [
@@ -52,8 +51,8 @@ export const SegmentedControl: React.FC<SegmentedControlProps> = ({
 }) => {
   return (
     <div className="w-full space-y-4">
-      {/* 1. Primary Platform Segmented Bar (Dark Luxury Surface) */}
-      <div className="p-1.5 rounded-2xl bg-[#171916] border border-white/[0.09] shadow-md flex items-center overflow-x-auto no-scrollbar gap-1.5">
+      {/* 1. Primary Platform Segmented Bar (Dark Minimalist Black & Orange) */}
+      <div className="p-1.5 rounded-2xl bg-[#0A0A0A] border border-white/[0.08] shadow-md flex items-center overflow-x-auto no-scrollbar gap-1.5">
         {PLATFORMS.map((item) => {
           const isActive = platform === item.id;
           const count = platformCounts[item.id] || 0;
@@ -61,21 +60,21 @@ export const SegmentedControl: React.FC<SegmentedControlProps> = ({
             <button
               key={item.id}
               onClick={() => onChangePlatform(item.id)}
-              className={`flex-1 min-w-[130px] sm:min-w-0 py-2.5 px-3 rounded-xl text-xs sm:text-sm font-medium flex items-center justify-center gap-2.5 transition-all whitespace-nowrap border ${
+              className={`flex-1 min-w-[130px] sm:min-w-0 py-2.5 px-3 rounded-xl text-xs sm:text-sm font-medium flex items-center justify-center gap-2.5 transition-all whitespace-nowrap border cursor-pointer ${
                 isActive
-                  ? 'bg-[#1D211D] text-[#F2F1EB] font-bold border-[#B8C7A1]/40 shadow-sm'
-                  : 'text-[#A2A69D] hover:text-[#F2F1EB] hover:bg-[#1D211D]/60 border-transparent'
+                  ? 'bg-[#121212] text-[#FFFFFF] font-bold border-[#F97316]/50 shadow-[0_2px_12px_rgba(249,115,22,0.12)]'
+                  : 'text-[#A0A0A0] hover:text-[#FFFFFF] hover:bg-[#121212]/60 border-transparent'
               }`}
             >
-              <span className={isActive ? 'text-[#B8C7A1]' : 'text-[#A2A69D]'}>
+              <span className={isActive ? 'text-[#F97316]' : 'text-[#A0A0A0]'}>
                 {item.icon}
               </span>
               <span>{item.label}</span>
               <span
                 className={`text-[10px] px-2 py-0.5 rounded font-mono font-bold tabular-nums ${
                   isActive
-                    ? 'bg-[#B8C7A1]/20 text-[#B8C7A1] border border-[#B8C7A1]/30'
-                    : 'bg-[#10110F] text-[#A2A69D] border border-white/[0.05]'
+                    ? 'bg-[#F97316]/20 text-[#F97316] border border-[#F97316]/35'
+                    : 'bg-[#000000] text-[#A0A0A0] border border-white/[0.05]'
                 }`}
               >
                 {count}
@@ -95,13 +94,13 @@ export const SegmentedControl: React.FC<SegmentedControlProps> = ({
               <button
                 key={cat.id}
                 onClick={() => onChangeCategory(cat.id)}
-                className={`px-3.5 py-1.5 rounded-xl text-xs font-medium flex items-center gap-1.5 whitespace-nowrap transition-all border ${
+                className={`px-3.5 py-1.5 rounded-xl text-xs font-medium flex items-center gap-1.5 whitespace-nowrap transition-all border cursor-pointer ${
                   isCatActive
-                    ? 'bg-[#B8C7A1]/15 border-[#B8C7A1]/40 text-[#B8C7A1] font-semibold'
-                    : 'bg-[#171916] text-[#A2A69D] border-white/[0.08] hover:border-white/[0.18] hover:text-[#F2F1EB] hover:bg-[#1D211D]'
+                    ? 'bg-[#F97316]/15 border-[#F97316]/45 text-[#F97316] font-semibold'
+                    : 'bg-[#0A0A0A] text-[#A0A0A0] border-white/[0.08] hover:border-white/[0.18] hover:text-[#FFFFFF] hover:bg-[#121212]'
                 }`}
               >
-                <span className={isCatActive ? 'text-[#B8C7A1]' : 'text-[#A2A69D]'}>{cat.icon}</span>
+                <span className={isCatActive ? 'text-[#F97316]' : 'text-[#A0A0A0]'}>{cat.icon}</span>
                 <span>{cat.label}</span>
               </button>
             );
@@ -109,8 +108,8 @@ export const SegmentedControl: React.FC<SegmentedControlProps> = ({
         </div>
 
         {/* Complexity/Severity Filter */}
-        <div className="flex items-center gap-1.5 shrink-0 self-end sm:self-auto text-xs bg-[#171916] p-1 rounded-xl border border-white/[0.08]">
-          <span className="text-[#A2A69D] font-mono text-[10px] uppercase tracking-wider px-2 hidden md:inline">
+        <div className="flex items-center gap-1.5 shrink-0 self-end sm:self-auto text-xs bg-[#0A0A0A] p-1 rounded-xl border border-white/[0.08]">
+          <span className="text-[#A0A0A0] font-mono text-[10px] uppercase tracking-wider px-2 hidden md:inline">
             Độ khó:
           </span>
           {(['all', 'easy', 'medium', 'hard'] as const).map((sev) => {
@@ -125,10 +124,10 @@ export const SegmentedControl: React.FC<SegmentedControlProps> = ({
               <button
                 key={sev}
                 onClick={() => onChangeSeverity(sev)}
-                className={`px-2.5 py-1 rounded-lg transition-all text-xs font-medium border ${
+                className={`px-2.5 py-1 rounded-lg transition-all text-xs font-medium border cursor-pointer ${
                   isSevActive
-                    ? 'bg-[#1D211D] text-[#B8C7A1] border-[#B8C7A1]/40 font-semibold'
-                    : 'text-[#A2A69D] border-transparent hover:text-[#F2F1EB]'
+                    ? 'bg-[#121212] text-[#F97316] border-[#F97316]/40 font-semibold'
+                    : 'text-[#A0A0A0] border-transparent hover:text-[#FFFFFF]'
                 }`}
               >
                 {labelMap[sev]}

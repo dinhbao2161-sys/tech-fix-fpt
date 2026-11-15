@@ -1,24 +1,32 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { 
   X, 
   Plus, 
   Trash2, 
   Sparkles, 
-  AlertCircle
+  AlertCircle,
+  Loader2,
+  LogIn,
+  ShieldCheck
 } from 'lucide-react';
 import { Issue, StepGuide } from '../types/issue';
+import { AuthUser } from '../types/auth';
 import { validateIssueForm } from '../utils/filterIssues';
 
 interface AddIssueModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onAddIssue: (newIssue: Issue) => void;
+  onAddIssue: (newIssue: Issue) => Promise<{ ok: boolean; error?: string }>;
+  currentUser: AuthUser | null;
+  onRequestLogin: () => void;
 }
 
 export const AddIssueModal: React.FC<AddIssueModalProps> = ({
   isOpen,
   onClose,
   onAddIssue,
+  currentUser,
+  onRequestLogin,
 }) => {
   const [title, setTitle] = useState('');
   const [platform, setPlatform] = useState<'iphone' | 'android' | 'windows' | 'mac' | 'hardware'>('iphone');
@@ -28,6 +36,8 @@ export const AddIssueModal: React.FC<AddIssueModalProps> = ({
   const [summary, setSummary] = useState('');
   const [author, setAuthor] = useState('');
   const [requiredTools, setRequiredTools] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   // Dynamic arrays
   const [symptoms, setSymptoms] = useState<string[]>(['']);
@@ -38,6 +48,12 @@ export const AddIssueModal: React.FC<AddIssueModalProps> = ({
   ]);
 
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    if (currentUser && !author.trim()) {
+      setAuthor(currentUser.name);
+    }
+  }, [currentUser, author]);
 
   if (!isOpen) return null;
 
@@ -75,8 +91,15 @@ export const AddIssueModal: React.FC<AddIssueModalProps> = ({
     setSteps(next);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setSubmitError(null);
+
+    if (!currentUser) {
+      setSubmitError('Vui lòng đăng nhập để gửi bài đóng góp (AI sẽ tự động duyệt sau khi gửi).');
+      onRequestLogin();
+      return;
+    }
 
     const validation = validateIssueForm({
       title,
@@ -91,6 +114,7 @@ export const AddIssueModal: React.FC<AddIssueModalProps> = ({
     }
 
     setErrors({});
+    setIsSubmitting(true);
 
     const formattedSteps: StepGuide[] = steps
       .filter((s) => s.instructions.trim())
@@ -117,45 +141,65 @@ export const AddIssueModal: React.FC<AddIssueModalProps> = ({
         ? requiredTools.split(',').map((t) => t.trim()).filter(Boolean)
         : undefined,
       tags: [platform, category, title.toLowerCase().slice(0, 15)],
-      author: author.trim() || 'Kỹ thuật viên cộng đồng',
+      author: author.trim() || currentUser.name || 'Kỹ thuật viên cộng đồng',
+      authorEmail: currentUser.email,
+      authorId: currentUser.id,
       createdAt: new Date().toISOString().split('T')[0],
       helpfulCount: 1,
       isUserSubmitted: true,
     };
 
-    onAddIssue(newIssue);
-    onClose();
+    try {
+      const result = await onAddIssue(newIssue);
+      if (!result.ok) {
+        setSubmitError(result.error || 'Không thể gửi bài đóng góp. Vui lòng thử lại.');
+        return;
+      }
+      setTitle('');
+      setSummary('');
+      setSymptoms(['']);
+      setCauses(['']);
+      setSteps([
+        { title: 'Chẩn đoán sơ bộ', instructions: '', tip: '', warning: '' },
+        { title: 'Thao tác khắc phục', instructions: '', tip: '', warning: '' }
+      ]);
+      setRequiredTools('');
+      onClose();
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-[#10110F]/85 flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-[#000000]/90 flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-200">
       <div className="fixed inset-0" onClick={onClose} aria-hidden="true" />
 
-      <div className="relative w-full max-w-3xl max-h-[92vh] sm:max-h-[88vh] bg-[#171916] rounded-t-3xl sm:rounded-3xl shadow-2xl flex flex-col overflow-hidden border border-white/[0.12] z-10">
+      <div className="relative w-full max-w-3xl max-h-[92vh] sm:max-h-[88vh] bg-[#0A0A0A] rounded-t-3xl sm:rounded-3xl shadow-2xl flex flex-col overflow-hidden border border-white/[0.1] z-10">
         {/* Mobile Drag Handle */}
-        <div className="sm:hidden pt-3 pb-1 flex justify-center bg-[#171916]">
+        <div className="sm:hidden pt-3 pb-1 flex justify-center bg-[#0A0A0A]">
           <div className="w-12 h-1.5 rounded-full bg-white/20" />
         </div>
 
         {/* Modal Header */}
-        <div className="px-6 sm:px-8 py-4.5 border-b border-white/[0.08] flex items-center justify-between gap-4 bg-[#171916] sticky top-0 z-20">
+        <div className="px-6 sm:px-8 py-4.5 border-b border-white/[0.08] flex items-center justify-between gap-4 bg-[#0A0A0A] sticky top-0 z-20">
           <div className="flex items-center gap-3">
-            <span className="p-2.5 rounded-xl bg-[#1D211D] border border-white/[0.09] text-[#B8C7A1]">
+            <span className="p-2.5 rounded-xl bg-[#121212] border border-white/[0.08] text-[#F97316]">
               <Sparkles className="w-5 h-5" />
             </span>
             <div>
-              <h2 className="text-base font-bold text-[#F2F1EB] font-['Manrope']">
+              <h2 className="text-base font-bold text-[#FFFFFF] font-['Manrope']">
                 Đóng Góp Giải Pháp Kỹ Thuật
               </h2>
-              <p className="text-xs text-[#A2A69D]">
-                Mở rộng kho kiến thức chẩn đoán sự cố cho cộng đồng
+              <p className="text-xs text-[#A0A0A0]">
+                AI Gemini tự động duyệt ngay nếu không chứa nội dung 18+ hoặc nhạy cảm
               </p>
             </div>
           </div>
 
           <button
+            type="button"
             onClick={onClose}
-            className="w-9 h-9 rounded-xl bg-[#1D211D] border border-white/[0.08] hover:bg-[#252b24] flex items-center justify-center text-[#A2A69D] hover:text-[#F2F1EB] transition-colors"
+            className="w-9 h-9 rounded-xl bg-[#121212] border border-white/[0.08] hover:bg-[#1E1E1E] flex items-center justify-center text-[#A0A0A0] hover:text-[#FFFFFF] transition-colors cursor-pointer"
           >
             <X className="w-4 h-4" />
           </button>
@@ -163,24 +207,59 @@ export const AddIssueModal: React.FC<AddIssueModalProps> = ({
 
         {/* Form Body */}
         <form onSubmit={handleSubmit} className="overflow-y-auto px-6 sm:px-8 py-7 space-y-6">
+          {/* Auth / AI Moderation Notice Banner */}
+          {!currentUser ? (
+            <div className="p-4 rounded-2xl bg-[#F97316]/10 border border-[#F97316]/35 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="text-xs text-[#FFFFFF] space-y-0.5">
+                <div className="font-bold text-[#F97316]">Yêu cầu đăng nhập trước khi gửi đóng góp</div>
+                <div className="text-[#A0A0A0]">
+                  Đăng nhập bằng Google hoặc Email để gửi giải pháp. Bản nháp của bạn sẽ được giữ nguyên.
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={onRequestLogin}
+                className="h-9 px-4 rounded-xl bg-[#F97316] hover:bg-[#FB923C] text-[#000000] text-xs font-bold flex items-center gap-1.5 shrink-0 cursor-pointer"
+              >
+                <LogIn className="w-3.5 h-3.5" />
+                <span>Đăng nhập ngay</span>
+              </button>
+            </div>
+          ) : (
+            <div className="p-3.5 rounded-2xl bg-[#121212] border border-white/[0.08] flex items-center gap-2.5 text-xs text-[#A0A0A0]">
+              <ShieldCheck className="w-4 h-4 text-[#F97316] shrink-0" />
+              <span>
+                Đăng với tài khoản <strong className="text-[#FFFFFF]">{currentUser.email}</strong>.
+                Bài viết sẽ được AI kiểm duyệt tự động (chỉ từ chối nội dung 18+ hoặc nhạy cảm).
+              </span>
+            </div>
+          )}
+
+          {submitError && (
+            <div className="p-3.5 rounded-xl bg-[#EF4444]/10 border border-[#EF4444]/30 text-xs text-[#EF4444] flex items-start gap-2">
+              <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+              <span>{submitError}</span>
+            </div>
+          )}
+
           {/* Title */}
           <div>
-            <label className="block text-xs font-mono font-bold uppercase tracking-wider text-[#A2A69D] mb-2">
-              Tiêu đề sự cố / Lỗi kỹ thuật <span className="text-[#E07A5F]">*</span>
+            <label className="block text-xs font-mono font-bold uppercase tracking-wider text-[#A0A0A0] mb-2">
+              Tiêu đề sự cố / Lỗi kỹ thuật <span className="text-[#F97316]">*</span>
             </label>
             <input
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="Ví dụ: Cách khắc phục iPhone sạc không vào pin báo phụ kiện không hỗ trợ"
-              className={`w-full px-4 py-3 rounded-xl border text-sm bg-[#1D211D] text-[#F2F1EB] placeholder:text-[#A2A69D]/60 outline-none transition-all ${
+              className={`w-full px-4 py-3 rounded-xl border text-sm bg-[#121212] text-[#FFFFFF] placeholder:text-[#A0A0A0]/60 outline-none transition-all ${
                 errors.title
-                  ? 'border-[#E07A5F] ring-1 ring-[#E07A5F]/20'
-                  : 'border-white/[0.09] focus:border-[#B8C7A1]'
+                  ? 'border-[#EF4444] ring-1 ring-[#EF4444]/20'
+                  : 'border-white/[0.08] focus:border-[#F97316]'
               }`}
             />
             {errors.title && (
-              <p className="text-xs text-[#E07A5F] mt-1.5 flex items-center gap-1 font-mono">
+              <p className="text-xs text-[#EF4444] mt-1.5 flex items-center gap-1 font-mono">
                 <AlertCircle className="w-3.5 h-3.5" />
                 {errors.title}
               </p>
@@ -190,13 +269,13 @@ export const AddIssueModal: React.FC<AddIssueModalProps> = ({
           {/* Platform & Category Grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-mono font-bold uppercase tracking-wider text-[#A2A69D] mb-2">
+              <label className="block text-xs font-mono font-bold uppercase tracking-wider text-[#A0A0A0] mb-2">
                 Nền tảng thiết bị
               </label>
               <select
                 value={platform}
                 onChange={(e) => setPlatform(e.target.value as any)}
-                className="w-full px-4 py-3 rounded-xl border border-white/[0.09] text-sm bg-[#1D211D] text-[#F2F1EB] outline-none focus:border-[#B8C7A1]"
+                className="w-full px-4 py-3 rounded-xl border border-white/[0.08] text-sm bg-[#121212] text-[#FFFFFF] outline-none focus:border-[#F97316]"
               >
                 <option value="iphone">iPhone / iOS</option>
                 <option value="android">Android (Samsung, Xiaomi, OPPO...)</option>
@@ -207,13 +286,13 @@ export const AddIssueModal: React.FC<AddIssueModalProps> = ({
             </div>
 
             <div>
-              <label className="block text-xs font-mono font-bold uppercase tracking-wider text-[#A2A69D] mb-2">
+              <label className="block text-xs font-mono font-bold uppercase tracking-wider text-[#A0A0A0] mb-2">
                 Chuyên mục sự cố
               </label>
               <select
                 value={category}
                 onChange={(e) => setCategory(e.target.value as any)}
-                className="w-full px-4 py-3 rounded-xl border border-white/[0.09] text-sm bg-[#1D211D] text-[#F2F1EB] outline-none focus:border-[#B8C7A1]"
+                className="w-full px-4 py-3 rounded-xl border border-white/[0.08] text-sm bg-[#121212] text-[#FFFFFF] outline-none focus:border-[#F97316]"
               >
                 <option value="system">Hệ thống & Khởi động</option>
                 <option value="screen">Màn hình & Cảm ứng</option>
@@ -228,13 +307,13 @@ export const AddIssueModal: React.FC<AddIssueModalProps> = ({
           {/* Severity & Estimated Time */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
-              <label className="block text-xs font-mono font-bold uppercase tracking-wider text-[#A2A69D] mb-2">
+              <label className="block text-xs font-mono font-bold uppercase tracking-wider text-[#A0A0A0] mb-2">
                 Mức độ phức tạp
               </label>
               <select
                 value={severity}
                 onChange={(e) => setSeverity(e.target.value as any)}
-                className="w-full px-4 py-3 rounded-xl border border-white/[0.09] text-sm bg-[#1D211D] text-[#F2F1EB] outline-none focus:border-[#B8C7A1]"
+                className="w-full px-4 py-3 rounded-xl border border-white/[0.08] text-sm bg-[#121212] text-[#FFFFFF] outline-none focus:border-[#F97316]"
               >
                 <option value="easy">Dễ xử lý (Tự thao tác)</option>
                 <option value="medium">Trung bình (Cần cẩn thận)</option>
@@ -243,7 +322,7 @@ export const AddIssueModal: React.FC<AddIssueModalProps> = ({
             </div>
 
             <div>
-              <label className="block text-xs font-mono font-bold uppercase tracking-wider text-[#A2A69D] mb-2">
+              <label className="block text-xs font-mono font-bold uppercase tracking-wider text-[#A0A0A0] mb-2">
                 Thời gian dự kiến
               </label>
               <input
@@ -251,12 +330,12 @@ export const AddIssueModal: React.FC<AddIssueModalProps> = ({
                 value={estimatedTime}
                 onChange={(e) => setEstimatedTime(e.target.value)}
                 placeholder="Ví dụ: 5 phút, 15 phút"
-                className="w-full px-4 py-3 rounded-xl border border-white/[0.09] text-sm bg-[#1D211D] text-[#F2F1EB] placeholder:text-[#A2A69D]/60 outline-none focus:border-[#B8C7A1]"
+                className="w-full px-4 py-3 rounded-xl border border-white/[0.08] text-sm bg-[#121212] text-[#FFFFFF] placeholder:text-[#A0A0A0]/60 outline-none focus:border-[#F97316]"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-mono font-bold uppercase tracking-wider text-[#A2A69D] mb-2">
+              <label className="block text-xs font-mono font-bold uppercase tracking-wider text-[#A0A0A0] mb-2">
                 Tên kỹ thuật viên
               </label>
               <input
@@ -264,29 +343,29 @@ export const AddIssueModal: React.FC<AddIssueModalProps> = ({
                 value={author}
                 onChange={(e) => setAuthor(e.target.value)}
                 placeholder="Họ tên hoặc bí danh"
-                className="w-full px-4 py-3 rounded-xl border border-white/[0.09] text-sm bg-[#1D211D] text-[#F2F1EB] placeholder:text-[#A2A69D]/60 outline-none focus:border-[#B8C7A1]"
+                className="w-full px-4 py-3 rounded-xl border border-white/[0.08] text-sm bg-[#121212] text-[#FFFFFF] placeholder:text-[#A0A0A0]/60 outline-none focus:border-[#F97316]"
               />
             </div>
           </div>
 
           {/* Summary */}
           <div>
-            <label className="block text-xs font-mono font-bold uppercase tracking-wider text-[#A2A69D] mb-2">
-              Tóm tắt sự cố <span className="text-[#E07A5F]">*</span>
+            <label className="block text-xs font-mono font-bold uppercase tracking-wider text-[#A0A0A0] mb-2">
+              Tóm tắt sự cố <span className="text-[#F97316]">*</span>
             </label>
             <textarea
               rows={2}
               value={summary}
               onChange={(e) => setSummary(e.target.value)}
               placeholder="Tóm tắt ngắn gọn triệu chứng và hướng khắc phục..."
-              className={`w-full px-4 py-3 rounded-xl border text-sm bg-[#1D211D] text-[#F2F1EB] placeholder:text-[#A2A69D]/60 outline-none transition-all ${
+              className={`w-full px-4 py-3 rounded-xl border text-sm bg-[#121212] text-[#FFFFFF] placeholder:text-[#A0A0A0]/60 outline-none transition-all ${
                 errors.summary
-                  ? 'border-[#E07A5F] ring-1 ring-[#E07A5F]/20'
-                  : 'border-white/[0.09] focus:border-[#B8C7A1]'
+                  ? 'border-[#EF4444] ring-1 ring-[#EF4444]/20'
+                  : 'border-white/[0.08] focus:border-[#F97316]'
               }`}
             />
             {errors.summary && (
-              <p className="text-xs text-[#E07A5F] mt-1.5 flex items-center gap-1 font-mono">
+              <p className="text-xs text-[#EF4444] mt-1.5 flex items-center gap-1 font-mono">
                 <AlertCircle className="w-3.5 h-3.5" />
                 {errors.summary}
               </p>
@@ -296,13 +375,13 @@ export const AddIssueModal: React.FC<AddIssueModalProps> = ({
           {/* Symptoms List */}
           <div>
             <div className="flex items-center justify-between mb-2">
-              <label className="text-xs font-mono font-bold uppercase tracking-wider text-[#A2A69D]">
+              <label className="text-xs font-mono font-bold uppercase tracking-wider text-[#A0A0A0]">
                 Dấu hiệu nhận biết
               </label>
               <button
                 type="button"
                 onClick={handleAddSymptom}
-                className="text-xs font-mono text-[#B8C7A1] hover:underline flex items-center gap-1"
+                className="text-xs font-mono text-[#F97316] hover:underline flex items-center gap-1 cursor-pointer"
               >
                 <Plus className="w-3 h-3" />
                 Thêm dấu hiệu
@@ -316,13 +395,13 @@ export const AddIssueModal: React.FC<AddIssueModalProps> = ({
                     value={sym}
                     onChange={(e) => handleSymptomChange(idx, e.target.value)}
                     placeholder={`Dấu hiệu ${idx + 1}`}
-                    className="flex-1 px-4 py-2.5 rounded-xl border border-white/[0.09] text-xs sm:text-sm bg-[#1D211D] text-[#F2F1EB] placeholder:text-[#A2A69D]/60 outline-none focus:border-[#B8C7A1]"
+                    className="flex-1 px-4 py-2.5 rounded-xl border border-white/[0.08] text-xs sm:text-sm bg-[#121212] text-[#FFFFFF] placeholder:text-[#A0A0A0]/60 outline-none focus:border-[#F97316]"
                   />
                   {symptoms.length > 1 && (
                     <button
                       type="button"
                       onClick={() => handleRemoveSymptom(idx)}
-                      className="p-2 text-[#A2A69D] hover:text-[#E07A5F]"
+                      className="p-2 text-[#A0A0A0] hover:text-[#EF4444] cursor-pointer"
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
@@ -335,13 +414,13 @@ export const AddIssueModal: React.FC<AddIssueModalProps> = ({
           {/* Causes List */}
           <div>
             <div className="flex items-center justify-between mb-2">
-              <label className="text-xs font-mono font-bold uppercase tracking-wider text-[#A2A69D]">
-                Nguyên nhân cốt lõi <span className="text-[#E07A5F]">*</span>
+              <label className="text-xs font-mono font-bold uppercase tracking-wider text-[#A0A0A0]">
+                Nguyên nhân cốt lõi <span className="text-[#F97316]">*</span>
               </label>
               <button
                 type="button"
                 onClick={handleAddCause}
-                className="text-xs font-mono text-[#B8C7A1] hover:underline flex items-center gap-1"
+                className="text-xs font-mono text-[#F97316] hover:underline flex items-center gap-1 cursor-pointer"
               >
                 <Plus className="w-3 h-3" />
                 Thêm nguyên nhân
@@ -355,13 +434,13 @@ export const AddIssueModal: React.FC<AddIssueModalProps> = ({
                     value={cause}
                     onChange={(e) => handleCauseChange(idx, e.target.value)}
                     placeholder={`Nguyên nhân ${idx + 1}`}
-                    className="flex-1 px-4 py-2.5 rounded-xl border border-white/[0.09] text-xs sm:text-sm bg-[#1D211D] text-[#F2F1EB] placeholder:text-[#A2A69D]/60 outline-none focus:border-[#B8C7A1]"
+                    className="flex-1 px-4 py-2.5 rounded-xl border border-white/[0.08] text-xs sm:text-sm bg-[#121212] text-[#FFFFFF] placeholder:text-[#A0A0A0]/60 outline-none focus:border-[#F97316]"
                   />
                   {causes.length > 1 && (
                     <button
                       type="button"
                       onClick={() => handleRemoveCause(idx)}
-                      className="p-2 text-[#A2A69D] hover:text-[#E07A5F]"
+                      className="p-2 text-[#A0A0A0] hover:text-[#EF4444] cursor-pointer"
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
@@ -370,7 +449,7 @@ export const AddIssueModal: React.FC<AddIssueModalProps> = ({
               ))}
             </div>
             {errors.causes && (
-              <p className="text-xs text-[#E07A5F] mt-1.5 flex items-center gap-1 font-mono">
+              <p className="text-xs text-[#EF4444] mt-1.5 flex items-center gap-1 font-mono">
                 <AlertCircle className="w-3.5 h-3.5" />
                 {errors.causes}
               </p>
@@ -380,13 +459,13 @@ export const AddIssueModal: React.FC<AddIssueModalProps> = ({
           {/* Steps List */}
           <div>
             <div className="flex items-center justify-between mb-3">
-              <label className="text-xs font-mono font-bold uppercase tracking-wider text-[#A2A69D]">
-                Quy trình các bước chẩn đoán <span className="text-[#E07A5F]">*</span>
+              <label className="text-xs font-mono font-bold uppercase tracking-wider text-[#A0A0A0]">
+                Quy trình các bước chẩn đoán <span className="text-[#F97316]">*</span>
               </label>
               <button
                 type="button"
                 onClick={handleAddStep}
-                className="text-xs font-mono text-[#B8C7A1] hover:underline flex items-center gap-1"
+                className="text-xs font-mono text-[#F97316] hover:underline flex items-center gap-1 cursor-pointer"
               >
                 <Plus className="w-3 h-3" />
                 Thêm bước tiếp theo
@@ -397,17 +476,17 @@ export const AddIssueModal: React.FC<AddIssueModalProps> = ({
               {steps.map((st, idx) => (
                 <div
                   key={idx}
-                  className="p-5 rounded-2xl border border-white/[0.08] bg-[#1D211D] space-y-3"
+                  className="p-5 rounded-2xl border border-white/[0.08] bg-[#121212] space-y-3"
                 >
                   <div className="flex items-center justify-between gap-2">
-                    <span className="text-xs font-mono font-bold text-[#B8C7A1]">
+                    <span className="text-xs font-mono font-bold text-[#F97316]">
                       Bước {idx + 1}
                     </span>
                     {steps.length > 1 && (
                       <button
                         type="button"
                         onClick={() => handleRemoveStep(idx)}
-                        className="text-xs text-[#A2A69D] hover:text-[#E07A5F] flex items-center gap-1 font-mono"
+                        className="text-xs text-[#A0A0A0] hover:text-[#EF4444] flex items-center gap-1 font-mono cursor-pointer"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
                         Xóa bước
@@ -420,7 +499,7 @@ export const AddIssueModal: React.FC<AddIssueModalProps> = ({
                     value={st.title}
                     onChange={(e) => handleStepChange(idx, 'title', e.target.value)}
                     placeholder="Tiêu đề bước (ví dụ: Reset tổ hợp phím cứng)"
-                    className="w-full px-4 py-2.5 rounded-xl border border-white/[0.09] text-xs sm:text-sm bg-[#171916] text-[#F2F1EB] placeholder:text-[#A2A69D]/60 outline-none focus:border-[#B8C7A1] font-medium"
+                    className="w-full px-4 py-2.5 rounded-xl border border-white/[0.08] text-xs sm:text-sm bg-[#0A0A0A] text-[#FFFFFF] placeholder:text-[#A0A0A0]/60 outline-none focus:border-[#F97316] font-medium"
                   />
 
                   <textarea
@@ -428,7 +507,7 @@ export const AddIssueModal: React.FC<AddIssueModalProps> = ({
                     value={st.instructions}
                     onChange={(e) => handleStepChange(idx, 'instructions', e.target.value)}
                     placeholder="Mô tả kỹ thuật chi tiết thao tác thực hiện..."
-                    className="w-full px-4 py-2.5 rounded-xl border border-white/[0.09] text-xs sm:text-sm bg-[#171916] text-[#F2F1EB] placeholder:text-[#A2A69D]/60 outline-none focus:border-[#B8C7A1]"
+                    className="w-full px-4 py-2.5 rounded-xl border border-white/[0.08] text-xs sm:text-sm bg-[#0A0A0A] text-[#FFFFFF] placeholder:text-[#A0A0A0]/60 outline-none focus:border-[#F97316]"
                   />
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
@@ -437,21 +516,21 @@ export const AddIssueModal: React.FC<AddIssueModalProps> = ({
                       value={st.tip}
                       onChange={(e) => handleStepChange(idx, 'tip', e.target.value)}
                       placeholder="Mẹo nhỏ hữu ích (tùy chọn)"
-                      className="px-3.5 py-2 rounded-lg border border-white/[0.08] text-xs bg-[#171916] text-[#F2F1EB] placeholder:text-[#A2A69D]/60 outline-none"
+                      className="px-3.5 py-2 rounded-lg border border-white/[0.08] text-xs bg-[#0A0A0A] text-[#FFFFFF] placeholder:text-[#A0A0A0]/60 outline-none"
                     />
                     <input
                       type="text"
                       value={st.warning}
                       onChange={(e) => handleStepChange(idx, 'warning', e.target.value)}
-                      placeholder="Lưu ý an toàn (tùy chọn)"
-                      className="px-3.5 py-2 rounded-lg border border-white/[0.08] text-xs bg-[#171916] text-[#F2F1EB] placeholder:text-[#A2A69D]/60 outline-none"
+                      placeholder="Cảnh báo an toàn (tùy chọn)"
+                      className="px-3.5 py-2 rounded-lg border border-white/[0.08] text-xs bg-[#0A0A0A] text-[#FFFFFF] placeholder:text-[#A0A0A0]/60 outline-none"
                     />
                   </div>
                 </div>
               ))}
             </div>
             {errors.steps && (
-              <p className="text-xs text-[#E07A5F] mt-1.5 flex items-center gap-1 font-mono">
+              <p className="text-xs text-[#EF4444] mt-1.5 flex items-center gap-1 font-mono">
                 <AlertCircle className="w-3.5 h-3.5" />
                 {errors.steps}
               </p>
@@ -460,7 +539,7 @@ export const AddIssueModal: React.FC<AddIssueModalProps> = ({
 
           {/* Tools required */}
           <div>
-            <label className="block text-xs font-mono font-bold uppercase tracking-wider text-[#A2A69D] mb-2">
+            <label className="block text-xs font-mono font-bold uppercase tracking-wider text-[#A0A0A0] mb-2">
               Dụng cụ thiết bị cần chuẩn bị (tùy chọn)
             </label>
             <input
@@ -468,24 +547,26 @@ export const AddIssueModal: React.FC<AddIssueModalProps> = ({
               value={requiredTools}
               onChange={(e) => setRequiredTools(e.target.value)}
               placeholder="Ngăn cách bằng dấu phẩy: Cáp sạc chính hãng, Máy tính, Tua vít T5"
-              className="w-full px-4 py-3 rounded-xl border border-white/[0.09] text-sm bg-[#1D211D] text-[#F2F1EB] placeholder:text-[#A2A69D]/60 outline-none focus:border-[#B8C7A1]"
+              className="w-full px-4 py-3 rounded-xl border border-white/[0.08] text-sm bg-[#121212] text-[#FFFFFF] placeholder:text-[#A0A0A0]/60 outline-none focus:border-[#F97316]"
             />
           </div>
 
           {/* Bottom Action */}
-          <div className="pt-4 border-t border-white/[0.08] flex items-center justify-end gap-3 sticky bottom-0 bg-[#171916] py-3 z-20">
+          <div className="pt-4 border-t border-white/[0.08] flex items-center justify-end gap-3 sticky bottom-0 bg-[#0A0A0A] py-3 z-20">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2.5 rounded-xl border border-white/[0.09] text-[#A2A69D] hover:text-[#F2F1EB] text-xs font-semibold hover:bg-[#1D211D] transition-colors"
+              className="px-4 py-2.5 rounded-xl border border-white/[0.08] text-[#A0A0A0] hover:text-[#FFFFFF] text-xs font-semibold hover:bg-[#121212] transition-colors cursor-pointer"
             >
               Hủy bỏ
             </button>
             <button
               type="submit"
-              className="px-6 py-2.5 rounded-xl bg-[#B8C7A1] hover:bg-[#c7d5b1] text-[#10110F] text-xs font-bold tracking-wide transition-all shadow-sm active:scale-[0.98]"
+              disabled={isSubmitting}
+              className="px-6 py-2.5 rounded-xl bg-[#F97316] hover:bg-[#ff8533] text-[#000000] text-xs font-bold tracking-wide transition-all shadow-[0_2px_12px_rgba(249,115,22,0.25)] active:scale-[0.98] disabled:opacity-60 flex items-center gap-2 cursor-pointer"
             >
-              Lưu & Xuất bản giải pháp
+              {isSubmitting && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+              <span>{isSubmitting ? 'AI đang duyệt bài...' : 'Gửi & AI kiểm duyệt'}</span>
             </button>
           </div>
         </form>

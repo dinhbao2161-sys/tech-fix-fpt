@@ -1,317 +1,484 @@
-/**
- * @license
- * SPDX-License-Identifier: Apache-2.0
- */
-
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { 
-  Terminal, 
-  Plus, 
-  Bookmark, 
-  Search,
-  Activity,
-  CheckCircle2,
-  Cpu,
-  Layers,
-  ShieldCheck,
-  Zap,
-  ArrowUpRight
+  Sparkles, 
+  ShieldCheck, 
+  AlertCircle,
+  Plus,
+  Camera
 } from 'lucide-react';
-import { Issue, Platform, Category, Severity } from './types/issue';
-import { DEFAULT_ISSUES } from './data/defaultIssues';
-import { filterIssues } from './utils/filterIssues';
 import { Header } from './components/Header';
 import { SearchBar } from './components/SearchBar';
 import { SegmentedControl } from './components/SegmentedControl';
 import { IssueCard } from './components/IssueCard';
 import { IssueDetailModal } from './components/IssueDetailModal';
 import { AddIssueModal } from './components/AddIssueModal';
+import { CameraDiagnoseModal } from './components/CameraDiagnoseModal';
+import { AuthModal } from './components/AuthModal';
+import { AdminModerationModal } from './components/AdminModerationModal';
 import { Toast } from './components/Toast';
 
+import { Issue, Platform, Category, Severity } from './types/issue';
+import { AuthUser } from './types/auth';
+import { DEFAULT_ISSUES } from './data/defaultIssues';
+import { filterIssues } from './utils/filterIssues';
+import { apiFetch, setStoredSessionToken } from './utils/apiClient';
+import { firebaseSignOut } from './utils/firebaseAuth';
+import {
+  DEFAULT_ADMIN_EMAIL,
+  canDeleteIssue,
+  canModerateIssues,
+} from './utils/moderation';
+
 export default function App() {
-  // 1. Issues state with LocalStorage persistence
-  const [issues, setIssues] = useState<Issue[]>(() => {
-    try {
-      const saved = localStorage.getItem('techcare_issues_v1');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          return parsed;
-        }
-      }
-    } catch {
-      // Fallback to defaults
-    }
-    return DEFAULT_ISSUES;
-  });
+  // 1. Auth & Issues State (Loaded cleanly with DEFAULT_ISSUES fallback then synced from server)
+  const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
+  const [issues, setIssues] = useState<Issue[]>(DEFAULT_ISSUES);
 
-  // 2. Filters
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedPlatform, setSelectedPlatform] = useState<Platform>('all');
-  const [selectedCategory, setSelectedCategory] = useState<Category>('all');
-  const [selectedSeverity, setSelectedSeverity] = useState<'all' | Severity>('all');
-  const [showOnlyBookmarks, setShowOnlyBookmarks] = useState(false);
-
-  // 3. User Bookmarks & Helpful reactions
+  // 2. Bookmarks State
   const [bookmarkedIds, setBookmarkedIds] = useState<string[]>(() => {
     try {
       const saved = localStorage.getItem('techcare_bookmarks');
-      return saved ? JSON.parse(saved) : [];
+      if (saved) return JSON.parse(saved);
     } catch {
-      return [];
+      // ignore
     }
+    return [];
   });
 
-  const [helpfulVotedIds, setHelpfulVotedIds] = useState<string[]>(() => {
+  // 3. Voted Helpful State
+  const [votedHelpfulIds, setVotedHelpfulIds] = useState<string[]>(() => {
     try {
-      const saved = localStorage.getItem('techcare_helpful_voted');
-      return saved ? JSON.parse(saved) : [];
+      const saved = localStorage.getItem('techcare_voted');
+      if (saved) return JSON.parse(saved);
     } catch {
-      return [];
+      // ignore
     }
+    return [];
   });
 
-  // 4. Modals & UI States
+  // 4. Filter and Search States
+  const [searchQuery, setSearchQuery] = useState('');
+  const [currentPlatform, setCurrentPlatform] = useState<Platform>('all');
+  const [currentCategory, setCurrentCategory] = useState<Category>('all');
+  const [currentSeverity, setCurrentSeverity] = useState<'all' | Severity>('all');
+  const [showOnlyBookmarks, setShowOnlyBookmarks] = useState(false);
+
+  // 5. Modal and Toast States
   const [selectedIssue, setSelectedIssue] = useState<Issue | null>(null);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isScannerOpen, setIsScannerOpen] = useState(false);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [authPromptReason, setAuthPromptReason] = useState<string | null>(null);
+  const [isAdminModalOpen, setIsAdminModalOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
-  // Sync bookmarks
+  const loadIssuesFromServer = useCallback(async (userOverride?: AuthUser | null) => {
+    const activeUser = userOverride !== undefined ? userOverride : currentUser;
+    const url = activeUser?.role === 'admin' ? '/api/issues?scope=all' : '/api/issues';
+    try {
+      const res = await apiFetch(url);
+      if (!res.ok) return;
+      const data = (await res.json()) as { issues?: Issue[] };
+      if (Array.isArray(data.issues)) {
+        setIssues(data.issues);
+      }
+    } catch {
+      // keep fallback issues if offline
+    }
+  }, [currentUser]);
+
+  // Initial auth + issues sync
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      try {
+        const meRes = await apiFetch('/api/auth/me');
+        const meData = meRes.ok ? ((await meRes.json()) as { user?: AuthUser | null }) : { user: null };
+        const user = meData.user ?? null;
+        if (active) {
+          setCurrentUser(user);
+          await loadIssuesFromServer(user);
+        }
+      } catch {
+        if (active) {
+          await loadIssuesFromServer(null);
+        }
+      }
+    })();
+    return () => {
+      active = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Auto-dismiss toast
+  useEffect(() => {
+    if (!toastMessage) return;
+    const timer = setTimeout(() => {
+      setToastMessage(null);
+    }, 3600);
+    return () => clearTimeout(timer);
+  }, [toastMessage]);
+
   useEffect(() => {
     try {
       localStorage.setItem('techcare_bookmarks', JSON.stringify(bookmarkedIds));
-    } catch {}
+    } catch {
+      // storage quota or disabled
+    }
   }, [bookmarkedIds]);
 
-  // Sync helpful votes
   useEffect(() => {
     try {
-      localStorage.setItem('techcare_helpful_voted', JSON.stringify(helpfulVotedIds));
-    } catch {}
-  }, [helpfulVotedIds]);
+      localStorage.setItem('techcare_voted', JSON.stringify(votedHelpfulIds));
+    } catch {
+      // storage quota or disabled
+    }
+  }, [votedHelpfulIds]);
 
-  // Sync issues
-  useEffect(() => {
-    try {
-      localStorage.setItem('techcare_issues_v1', JSON.stringify(issues));
-    } catch {}
-  }, [issues]);
+  // Issues shown in the main browse grid (approved items + current user's own flagged/pending items)
+  const feedIssues = useMemo(() => {
+    return issues.filter((issue) => {
+      const status = issue.moderationStatus ?? 'approved';
+      if (status === 'approved') return true;
+      if (!currentUser) return false;
+      return Boolean(
+        (issue.authorId && issue.authorId === currentUser.id) ||
+          (issue.authorEmail &&
+            issue.authorEmail.toLowerCase() === currentUser.email.toLowerCase())
+      );
+    });
+  }, [issues, currentUser]);
 
-  const showToast = (msg: string) => {
-    setToastMessage(msg);
-    setTimeout(() => {
-      setToastMessage((current) => (current === msg ? null : current));
-    }, 3000);
-  };
+  const pendingModerationCount = useMemo(() => {
+    if (!canModerateIssues(currentUser)) return 0;
+    return issues.filter(
+      (i) => i.moderationStatus === 'pending' || i.moderationStatus === 'rejected'
+    ).length;
+  }, [issues, currentUser]);
 
-  // Platform issue counts
+  // Platform counts calculation
   const platformCounts = useMemo(() => {
     const counts: Record<Platform, number> = {
-      all: issues.length,
+      all: feedIssues.length,
       iphone: 0,
       android: 0,
       windows: 0,
       mac: 0,
       hardware: 0,
     };
-    issues.forEach((item) => {
-      if (counts[item.platform] !== undefined) {
-        counts[item.platform]++;
+    for (const issue of feedIssues) {
+      if (counts[issue.platform] !== undefined) {
+        counts[issue.platform]++;
       }
-    });
+    }
     return counts;
-  }, [issues]);
+  }, [feedIssues]);
 
   // Filtered issues list
   const filteredIssues = useMemo(() => {
-    return filterIssues(issues, {
+    return filterIssues(feedIssues, {
       query: searchQuery,
-      platform: selectedPlatform,
-      category: selectedCategory,
-      severity: selectedSeverity,
+      platform: currentPlatform,
+      category: currentCategory,
+      severity: currentSeverity,
       onlyBookmarked: showOnlyBookmarks,
       bookmarkedIds,
     });
-  }, [issues, searchQuery, selectedPlatform, selectedCategory, selectedSeverity, showOnlyBookmarks, bookmarkedIds]);
+  }, [feedIssues, searchQuery, currentPlatform, currentCategory, currentSeverity, showOnlyBookmarks, bookmarkedIds]);
 
+  // Bookmark toggle
   const handleToggleBookmark = (id: string, e?: React.MouseEvent) => {
-    if (e) e.stopPropagation();
+    e?.stopPropagation();
     setBookmarkedIds((prev) => {
       const exists = prev.includes(id);
-      if (exists) {
-        showToast('Đã gỡ bài viết khỏi danh sách lưu trữ.');
-        return prev.filter((item) => item !== id);
-      } else {
-        showToast('Đã lưu bài viết vào kho lưu trữ cá nhân.');
-        return [...prev, id];
-      }
+      const next = exists ? prev.filter((item) => item !== id) : [...prev, id];
+      setToastMessage(exists ? 'Đã bỏ lưu sự cố khỏi danh sách' : 'Đã lưu sự cố để tra cứu nhanh');
+      return next;
     });
   };
 
-  const handleVoteHelpful = (id: string) => {
-    if (helpfulVotedIds.includes(id)) return;
-    setHelpfulVotedIds((prev) => [...prev, id]);
+  // Vote helpful
+  const handleVoteHelpful = async (id: string) => {
+    if (votedHelpfulIds.includes(id)) {
+      setToastMessage('Bạn đã bình chọn giải pháp này hữu ích rồi!');
+      return;
+    }
     setIssues((prev) =>
-      prev.map((item) => (item.id === id ? { ...item, helpfulCount: item.helpfulCount + 1 } : item))
+      prev.map((iss) => (iss.id === id ? { ...iss, helpfulCount: iss.helpfulCount + 1 } : iss))
     );
-    showToast('Đánh giá hữu ích đã được ghi nhận.');
+    setVotedHelpfulIds((prev) => [...prev, id]);
+    setToastMessage('Cảm ơn bạn đã phản hồi đánh giá hữu ích!');
+
+    try {
+      const res = await apiFetch(`/api/issues/${encodeURIComponent(id)}/helpful`, {
+        method: 'POST',
+      });
+      if (res.ok) {
+        const data = (await res.json()) as { helpfulCount?: number };
+        if (typeof data.helpfulCount === 'number') {
+          setIssues((prev) =>
+            prev.map((iss) => (iss.id === id ? { ...iss, helpfulCount: data.helpfulCount! } : iss))
+          );
+        }
+      }
+    } catch {
+      // optimistic count remains
+    }
   };
 
-  const handleAddIssue = (newIssue: Issue) => {
-    setIssues((prev) => [newIssue, ...prev]);
-    showToast('Đã xuất bản thành công giải pháp mới vào hệ thống.');
-    setSelectedPlatform(newIssue.platform);
-    setSelectedCategory('all');
-    setSelectedIssue(newIssue);
+  // Add new issue with server-side Gemini AI moderation
+  const handleAddNewIssue = async (newIssue: Issue): Promise<{ ok: boolean; error?: string }> => {
+    try {
+      const res = await apiFetch('/api/issues', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newIssue),
+      });
+      const data = (await res.json()) as { issue?: Issue; error?: string };
+      if (!res.ok || !data.issue) {
+        if (res.status === 401) {
+          setAuthPromptReason('Vui lòng đăng nhập để đóng góp giải pháp mới.');
+          setIsAuthModalOpen(true);
+        }
+        return { ok: false, error: data.error || 'Không thể lưu đóng góp.' };
+      }
+
+      const savedIssue = data.issue;
+      setIssues((prev) => [savedIssue, ...prev.filter((i) => i.id !== savedIssue.id)]);
+      if (savedIssue.moderationStatus === 'approved') {
+        setSelectedIssue(savedIssue);
+        setToastMessage('AI đã duyệt và xuất bản giải pháp mới thành công!');
+      } else {
+        setToastMessage(
+          savedIssue.moderationReason ||
+            'Bài viết chưa đạt kiểm duyệt tự động (18+/nhạy cảm) và đã chuyển tới Admin xem xét.'
+        );
+      }
+      return { ok: true };
+    } catch {
+      return { ok: false, error: 'Lỗi kết nối máy chủ khi gửi bài.' };
+    }
   };
 
-  const handleResetFilters = () => {
-    setSearchQuery('');
-    setSelectedPlatform('all');
-    setSelectedCategory('all');
-    setSelectedSeverity('all');
-    setShowOnlyBookmarks(false);
+  const handleModerateIssue = async (id: string, status: 'approved' | 'rejected') => {
+    try {
+      const res = await apiFetch(`/api/issues/${encodeURIComponent(id)}/moderate`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status }),
+      });
+      const data = (await res.json()) as { issue?: Issue; error?: string };
+      if (!res.ok || !data.issue) {
+        setToastMessage(data.error || 'Không thể cập nhật trạng thái duyệt.');
+        return;
+      }
+      const updated = data.issue;
+      setIssues((prev) => prev.map((iss) => (iss.id === updated.id ? updated : iss)));
+      if (selectedIssue?.id === updated.id) {
+        setSelectedIssue(updated);
+      }
+      setToastMessage(
+        status === 'approved'
+          ? 'Admin đã duyệt bài viết hiển thị công khai.'
+          : 'Admin đã từ chối / ẩn bài viết này.'
+      );
+    } catch {
+      setToastMessage('Lỗi kết nối khi duyệt bài viết.');
+    }
+  };
+
+  const handleDeleteIssue = async (id: string) => {
+    try {
+      const res = await apiFetch(`/api/issues/${encodeURIComponent(id)}`, {
+        method: 'DELETE',
+      });
+      const data = (await res.json()) as { ok?: boolean; error?: string };
+      if (!res.ok) {
+        setToastMessage(data.error || 'Không thể xóa bài viết.');
+        return;
+      }
+      setIssues((prev) => prev.filter((iss) => iss.id !== id));
+      if (selectedIssue?.id === id) {
+        setSelectedIssue(null);
+      }
+      setToastMessage('Đã xóa bài viết khỏi hệ thống.');
+    } catch {
+      setToastMessage('Lỗi kết nối khi xóa bài viết.');
+    }
+  };
+
+  const handleAuthSuccess = async (user: AuthUser) => {
+    setCurrentUser(user);
+    setAuthPromptReason(null);
+    await loadIssuesFromServer(user);
+    setToastMessage(
+      user.role === 'admin'
+        ? `Chào Admin ${user.name} (${user.email})! Bạn có toàn quyền duyệt và xóa bài.`
+        : `Đăng nhập thành công với tài khoản ${user.name}!`
+    );
+  };
+
+  const handleLogout = async () => {
+    try {
+      await Promise.all([
+        apiFetch('/api/auth/logout', { method: 'POST' }),
+        firebaseSignOut(),
+      ]);
+    } catch {
+      // ignore
+    }
+    setStoredSessionToken(null);
+    setCurrentUser(null);
+    setIsAdminModalOpen(false);
+    await loadIssuesFromServer(null);
+    setToastMessage('Đã đăng xuất khỏi tài khoản.');
   };
 
   return (
-    <div className="min-h-screen bg-[#10110F] text-[#F2F1EB] selection:bg-[#B8C7A1] selection:text-[#10110F] font-['Manrope'] transition-colors">
-      {/* Subtle sage ambient lighting at the very top */}
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[350px] luxury-sage-ambient pointer-events-none" />
-
-      {/* Dynamic Toast */}
-      <Toast message={toastMessage} onClose={() => setToastMessage(null)} />
-
-      {/* Header */}
+    <div className="min-h-screen bg-[#000000] text-[#FFFFFF] font-['Manrope'] selection:bg-[#F97316]/30 selection:text-[#F97316]">
+      {/* 1. Header */}
       <Header
-        currentPlatform={selectedPlatform}
+        currentPlatform={currentPlatform}
         onSelectPlatform={(p) => {
-          setSelectedPlatform(p);
+          setCurrentPlatform(p);
           if (showOnlyBookmarks) setShowOnlyBookmarks(false);
         }}
         onOpenAddModal={() => setIsAddModalOpen(true)}
+        onOpenScanner={() => setIsScannerOpen(true)}
         bookmarkCount={bookmarkedIds.length}
         showOnlyBookmarks={showOnlyBookmarks}
-        onToggleBookmarks={() => setShowOnlyBookmarks((prev) => !prev)}
+        onToggleBookmarks={() => setShowOnlyBookmarks(!showOnlyBookmarks)}
+        currentUser={currentUser}
+        onOpenAuthModal={() => {
+          setAuthPromptReason(null);
+          setIsAuthModalOpen(true);
+        }}
+        onLogout={handleLogout}
+        onOpenAdminModal={() => setIsAdminModalOpen(true)}
+        pendingModerationCount={pendingModerationCount}
       />
 
-      {/* Main Container */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-10 relative z-10">
-        {/* Hero Section: Dark Luxury Editorial & Asymmetric Layout */}
-        <section className="relative rounded-3xl p-7 sm:p-12 bg-[#171916] border border-white/[0.09] shadow-2xl overflow-hidden">
-          {/* Subtle tech grid background */}
-          <div className="absolute inset-0 luxury-grid-bg opacity-40 pointer-events-none" />
-
-          <div className="relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
-            {/* Left Column (8 cols): Editorial Typography & Search */}
-            <div className="lg:col-span-8 space-y-6">
-              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#1D211D] border border-white/[0.09]">
-                <span className="w-2 h-2 rounded-full bg-[#B8C7A1]" />
-                <span className="text-[11px] font-mono uppercase tracking-widest text-[#B8C7A1] font-semibold">
-                  Hệ Thống Chẩn Đoán Kỹ Thuật Độc Lập
-                </span>
-              </div>
-
-              <h1 className="text-3xl sm:text-5xl font-extrabold tracking-tight text-[#F2F1EB] leading-[1.15] font-['Manrope']">
-                Kho tri thức giải pháp sửa chữa & chẩn đoán thiết bị
-              </h1>
-
-              <p className="text-sm sm:text-base text-[#A2A69D] leading-relaxed max-w-2xl font-normal">
-                Hệ thống tổng hợp chuẩn xác các quy trình xử lý sự cố phần cứng và hệ điều hành: Windows màn hình xanh (BSOD), điện thoại Android bị treo đơ, mở khóa mật khẩu iPhone, kiểm tra linh kiện chính hãng và tối ưu hiệu suất.
-              </p>
-
-              {/* Search Bar */}
-              <div className="pt-2">
-                <SearchBar
-                  value={searchQuery}
-                  onChange={setSearchQuery}
-                  resultCount={filteredIssues.length}
-                  totalCount={issues.length}
-                />
-              </div>
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 space-y-10">
+        {/* 2. Conversational Editorial Hero */}
+        <section className="relative pt-4 pb-2">
+          <div className="max-w-3xl space-y-4">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-lg bg-[#0E0E0E] border border-[#F97316]/30 text-xs font-mono text-[#F97316]">
+              <Sparkles className="w-3.5 h-3.5" />
+              <span>HỆ THỐNG TRA CỨU SỰ CỐ & GIẢI PHÁP KỸ THUẬT</span>
             </div>
 
-            {/* Right Column (4 cols): Luxury Tech Metrics Strip (Asymmetric Editorial) */}
-            <div className="lg:col-span-4 flex flex-col gap-3.5 border-t lg:border-t-0 lg:border-l border-white/[0.09] pt-6 lg:pt-0 lg:pl-8">
-              <div className="p-4 rounded-2xl bg-[#1D211D] border border-white/[0.08] flex items-center justify-between">
-                <div>
-                  <span className="text-[11px] font-mono text-[#A2A69D] uppercase tracking-wider block">
-                    Quy trình kiểm định
-                  </span>
-                  <span className="text-2xl font-bold font-mono text-[#F2F1EB] mt-0.5 block tabular-nums">
-                    {issues.length} Đề Mục
-                  </span>
-                </div>
-                <div className="w-10 h-10 rounded-xl bg-[#171916] border border-white/[0.08] flex items-center justify-center text-[#B8C7A1]">
-                  <Cpu className="w-5 h-5 stroke-[1.8]" />
-                </div>
-              </div>
+            <h1 className="text-3xl sm:text-5xl font-extrabold tracking-tight text-[#FFFFFF] leading-tight font-['Manrope']">
+              Chẩn đoán & Xử lý sự cố <br />
+              <span className="text-[#F97316]">thiết bị điện tử</span> chính xác.
+            </h1>
 
-              <div className="p-4 rounded-2xl bg-[#1D211D] border border-white/[0.08] flex items-center justify-between">
-                <div>
-                  <span className="text-[11px] font-mono text-[#A2A69D] uppercase tracking-wider block">
-                    Tiêu chuẩn kỹ thuật
-                  </span>
-                  <span className="text-2xl font-bold font-mono text-[#B8C7A1] mt-0.5 block tabular-nums">
-                    100% Chính Xác
-                  </span>
-                </div>
-                <div className="w-10 h-10 rounded-xl bg-[#171916] border border-white/[0.08] flex items-center justify-center text-[#B8C7A1]">
-                  <ShieldCheck className="w-5 h-5 stroke-[1.8]" />
-                </div>
-              </div>
+            <p className="text-sm sm:text-base text-[#A0A0A0] leading-relaxed max-w-2xl font-normal">
+              Cẩm nang xử lý lỗi chi tiết từng bước cho iPhone, Android, máy tính Windows và Mac.
+              Từ lỗi màn hình xanh, quên mật khẩu, treo đơ máy đến kiểm tra linh kiện chính hãng.
+            </p>
 
-              <div className="p-4 rounded-2xl bg-[#1D211D] border border-white/[0.08] flex items-center justify-between">
-                <div>
-                  <span className="text-[11px] font-mono text-[#A2A69D] uppercase tracking-wider block">
-                    Nền tảng hỗ trợ
-                  </span>
-                  <span className="text-sm font-bold text-[#F2F1EB] mt-1 block">
-                    iOS · Android · Windows · Mac
-                  </span>
-                </div>
-                <div className="w-10 h-10 rounded-xl bg-[#171916] border border-white/[0.08] flex items-center justify-center text-[#B8C7A1]">
-                  <Layers className="w-5 h-5 stroke-[1.8]" />
-                </div>
-              </div>
+            <div className="flex flex-wrap items-center gap-3 pt-2">
+              <button
+                onClick={() => setIsScannerOpen(true)}
+                className="h-11 px-5 rounded-xl bg-[#F97316] hover:bg-[#FB923C] active:scale-[0.98] text-[#000000] text-xs sm:text-sm font-bold flex items-center gap-2 transition-all shadow-[0_2px_18px_rgba(249,115,22,0.35)] cursor-pointer"
+              >
+                <Camera className="w-4 h-4 stroke-[2.5]" />
+                <span>Quét lỗi bằng Camera Gemini</span>
+              </button>
+              <span className="text-xs text-[#A0A0A0]">
+                Gemini chỉ nhận diện lỗi qua ảnh & đề xuất mô-đun để bạn tự fix trên web
+              </span>
+            </div>
+          </div>
+
+          {/* Quick Metrics Bar */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-8 pt-6 border-t border-white/[0.08]">
+            <div className="p-3.5 rounded-xl bg-[#0A0A0A] border border-white/[0.06]">
+              <div className="text-xl sm:text-2xl font-bold font-mono text-[#F97316]">{feedIssues.length}</div>
+              <div className="text-xs text-[#A0A0A0] mt-0.5">Sự cố đã biên tập</div>
+            </div>
+            <div className="p-3.5 rounded-xl bg-[#0A0A0A] border border-white/[0.06]">
+              <div className="text-xl sm:text-2xl font-bold font-mono text-[#FFFFFF]">100%</div>
+              <div className="text-xs text-[#A0A0A0] mt-0.5">Đã test thực tế</div>
+            </div>
+            <div className="p-3.5 rounded-xl bg-[#0A0A0A] border border-white/[0.06]">
+              <div className="text-xl sm:text-2xl font-bold font-mono text-[#F97316]">5 Phút</div>
+              <div className="text-xs text-[#A0A0A0] mt-0.5">Thời gian xử lý TB</div>
+            </div>
+            <div className="p-3.5 rounded-xl bg-[#0A0A0A] border border-white/[0.06]">
+              <div className="text-xl sm:text-2xl font-bold font-mono text-[#FFFFFF]">Cộng đồng</div>
+              <div className="text-xs text-[#A0A0A0] mt-0.5">Đóng góp mở</div>
             </div>
           </div>
         </section>
 
-        {/* Filter Controls (Segmented Control + Category Chips) */}
-        <section aria-label="Bộ lọc thiết bị và danh mục">
+        {/* 3. Search and Quick Suggestions */}
+        <section>
+          <SearchBar
+            value={searchQuery}
+            onChange={setSearchQuery}
+            resultCount={filteredIssues.length}
+            totalCount={feedIssues.length}
+          />
+        </section>
+
+        {/* 4. Segmented Control Filter Tabs */}
+        <section>
           <SegmentedControl
-            platform={selectedPlatform}
-            onChangePlatform={setSelectedPlatform}
-            category={selectedCategory}
-            onChangeCategory={setSelectedCategory}
-            severity={selectedSeverity}
-            onChangeSeverity={setSelectedSeverity}
+            platform={currentPlatform}
+            onChangePlatform={setCurrentPlatform}
+            category={currentCategory}
+            onChangeCategory={setCurrentCategory}
+            severity={currentSeverity}
+            onChangeSeverity={setCurrentSeverity}
             platformCounts={platformCounts}
           />
         </section>
 
-        {/* Bookmark filter active indicator banner */}
+        {/* 5. Active Filters Notice (if bookmarks or search active) */}
         {showOnlyBookmarks && (
-          <div className="p-4 rounded-2xl bg-[#171916] border border-[#B8C7A1]/40 flex items-center justify-between gap-4">
-            <div className="flex items-center gap-3 text-xs sm:text-sm font-medium text-[#F2F1EB]">
-              <Bookmark className="w-4 h-4 fill-current text-[#B8C7A1]" />
-              <span>
-                Đang lọc hiển thị {filteredIssues.length} quy trình kỹ thuật bạn đã lưu trữ cá nhân.
-              </span>
+          <div className="flex items-center justify-between p-4 rounded-xl bg-[#0E0E0E] border border-[#F97316]/30 text-xs">
+            <div className="flex items-center gap-2 text-[#FFFFFF]">
+              <ShieldCheck className="w-4 h-4 text-[#F97316]" />
+              <span>Đang hiển thị <strong>{bookmarkedIds.length}</strong> bài viết bạn đã đánh dấu lưu trữ.</span>
             </div>
             <button
               onClick={() => setShowOnlyBookmarks(false)}
-              className="text-xs font-mono font-semibold text-[#B8C7A1] hover:underline shrink-0"
+              className="text-[#F97316] hover:underline font-semibold cursor-pointer"
             >
-              Hiện tất cả đề mục
+              Xem tất cả sự cố
             </button>
           </div>
         )}
 
-        {/* Results Grid (Dark Luxury Tech Cards) */}
-        <section aria-label="Danh sách các lỗi và giải pháp">
+        {/* 6. Issue Grid */}
+        <section className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-base sm:text-lg font-bold text-[#FFFFFF] flex items-center gap-2">
+              <span>Danh sách sự cố & hướng dẫn</span>
+              <span className="text-xs font-mono font-normal text-[#A0A0A0] px-2 py-0.5 rounded bg-[#0A0A0A] border border-white/[0.08]">
+                {filteredIssues.length} kết quả
+              </span>
+            </h2>
+
+            {(searchQuery || currentCategory !== 'all' || currentSeverity !== 'all' || currentPlatform !== 'all') && (
+              <button
+                onClick={() => {
+                  setSearchQuery('');
+                  setCurrentPlatform('all');
+                  setCurrentCategory('all');
+                  setCurrentSeverity('all');
+                }}
+                className="text-xs text-[#F97316] hover:underline cursor-pointer"
+              >
+                Đặt lại bộ lọc
+              </button>
+            )}
+          </div>
+
           {filteredIssues.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
               {filteredIssues.map((issue) => (
                 <IssueCard
                   key={issue.id}
@@ -323,31 +490,33 @@ export default function App() {
               ))}
             </div>
           ) : (
-            /* Empty State */
-            <div className="rounded-3xl p-14 text-center bg-[#171916] border border-white/[0.09] space-y-5">
-              <div className="w-14 h-14 rounded-2xl bg-[#1D211D] border border-white/[0.08] flex items-center justify-center mx-auto text-[#B8C7A1]">
-                <Search className="w-6 h-6" />
+            <div className="text-center py-16 px-4 rounded-2xl bg-[#0A0A0A] border border-white/[0.08] space-y-4">
+              <div className="w-12 h-12 rounded-xl bg-[#141414] border border-white/[0.1] text-[#F97316] flex items-center justify-center mx-auto">
+                <AlertCircle className="w-6 h-6" />
               </div>
-              <div className="max-w-md mx-auto space-y-1.5">
-                <h3 className="text-base font-bold text-[#F2F1EB] font-['Manrope']">
-                  Không tìm thấy đề mục tương ứng
-                </h3>
-                <p className="text-xs sm:text-sm text-[#A2A69D] leading-relaxed">
-                  Không có kết quả nào khớp với cụm từ "{searchQuery}" trong bộ lọc hiện thời. Bạn có thể xóa bộ lọc hoặc trực tiếp đóng góp giải pháp mới.
-                </p>
-              </div>
-              <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
+              <h3 className="text-base font-bold text-[#FFFFFF]">
+                Không tìm thấy sự cố phù hợp với từ khóa
+              </h3>
+              <p className="text-xs text-[#A0A0A0] max-w-md mx-auto">
+                Hãy thử tìm kiếm với các từ khóa ngắn gọn hơn như "màn hình", "pin", "mật khẩu", hoặc thêm lỗi bạn gặp phải vào hệ thống.
+              </p>
+              <div className="flex items-center justify-center gap-3 pt-2">
                 <button
-                  onClick={handleResetFilters}
-                  className="px-4 py-2.5 rounded-xl bg-[#1D211D] border border-white/[0.09] text-[#A2A69D] hover:text-[#F2F1EB] text-xs font-mono font-medium transition-colors"
+                  onClick={() => {
+                    setSearchQuery('');
+                    setCurrentCategory('all');
+                    setCurrentPlatform('all');
+                    setCurrentSeverity('all');
+                    setShowOnlyBookmarks(false);
+                  }}
+                  className="px-4 py-2 rounded-xl bg-[#141414] hover:bg-[#1E1E1E] text-xs font-semibold text-[#FFFFFF] border border-white/[0.1] cursor-pointer"
                 >
-                  Xóa bộ lọc tìm kiếm
+                  Xóa bộ lọc
                 </button>
                 <button
                   onClick={() => setIsAddModalOpen(true)}
-                  className="px-5 py-2.5 rounded-xl bg-[#B8C7A1] text-[#10110F] text-xs font-bold hover:bg-[#c7d5b1] transition-all flex items-center gap-1.5"
+                  className="px-4 py-2 rounded-xl bg-[#F97316] hover:bg-[#FB923C] text-xs font-bold text-[#000000] cursor-pointer"
                 >
-                  <Plus className="w-4 h-4 stroke-[2.5]" />
                   Đóng góp giải pháp mới
                 </button>
               </div>
@@ -355,41 +524,134 @@ export default function App() {
           )}
         </section>
 
-        {/* Editorial Architecture Footer */}
-        <footer className="pt-10 pb-6 border-t border-white/[0.08] flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-[#A2A69D]">
-          <div className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-[#B8C7A1]" />
-            <span className="font-mono text-[11px] uppercase tracking-wider text-[#F2F1EB]">
-              TechCare Engineering Knowledge Base
-            </span>
-            <span className="text-white/20">/</span>
-            <span>Phiên bản Dark Luxury Editorial</span>
+        {/* 7. Community Contribution Banner */}
+        <section className="p-6 sm:p-8 rounded-2xl bg-[#0A0A0A] border border-white/[0.08] relative overflow-hidden">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
+            <div className="space-y-2 max-w-xl">
+              <h3 className="text-lg sm:text-xl font-bold text-[#FFFFFF]">
+                Bạn vừa giải quyết được một lỗi khó chịu?
+              </h3>
+              <p className="text-xs sm:text-sm text-[#A0A0A0] leading-relaxed">
+                Chia sẻ các bước khắc phục của bạn để giúp đỡ hàng ngàn người dùng khác gặp sự cố tương tự trên thiết bị của họ.
+              </p>
+            </div>
+            <button
+              onClick={() => setIsAddModalOpen(true)}
+              className="px-5 py-3 rounded-xl bg-[#F97316] hover:bg-[#FB923C] active:scale-[0.98] text-[#000000] text-xs sm:text-sm font-bold flex items-center gap-2 shadow-[0_2px_14px_rgba(249,115,22,0.3)] shrink-0 cursor-pointer"
+            >
+              <Plus className="w-4 h-4 stroke-[2.5]" />
+              <span>Thêm lỗi bạn gặp phải</span>
+            </button>
           </div>
-
-          <div className="font-mono text-[11px] text-[#A2A69D]/80">
-            Dữ liệu kỹ thuật chuẩn đoán độc lập · Bản quyền 2026
-          </div>
-        </footer>
+        </section>
       </main>
 
-      {/* Detail Modal */}
-      {selectedIssue && (
-        <IssueDetailModal
-          issue={selectedIssue}
-          onClose={() => setSelectedIssue(null)}
-          isBookmarked={bookmarkedIds.includes(selectedIssue.id)}
-          onToggleBookmark={() => handleToggleBookmark(selectedIssue.id)}
-          onVoteHelpful={handleVoteHelpful}
-          hasVotedHelpful={helpfulVotedIds.includes(selectedIssue.id)}
-          onShowToast={showToast}
-        />
-      )}
+      {/* 8. Editorial Footer */}
+      <footer className="mt-16 border-t border-white/[0.08] bg-[#000000] py-12 text-xs text-[#A0A0A0]">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div>
+              <div className="text-sm font-bold text-[#FFFFFF]">TechCare Knowledge Base</div>
+              <p className="text-[11px] text-[#A0A0A0] mt-1">
+                Cẩm nang xử lý sự cố thiết bị điện tử — Mã nguồn mở & Hướng dẫn thực nghiệm
+              </p>
+            </div>
 
-      {/* Add Issue Modal */}
+            <div className="flex items-center gap-6 text-xs">
+              <button onClick={() => setCurrentPlatform('iphone')} className="hover:text-[#F97316] cursor-pointer">iPhone</button>
+              <button onClick={() => setCurrentPlatform('android')} className="hover:text-[#F97316] cursor-pointer">Android</button>
+              <button onClick={() => setCurrentPlatform('windows')} className="hover:text-[#F97316] cursor-pointer">Windows</button>
+              <button onClick={() => setCurrentPlatform('mac')} className="hover:text-[#F97316] cursor-pointer">macOS</button>
+            </div>
+          </div>
+
+          <div className="pt-6 border-t border-white/[0.05] flex flex-col sm:flex-row items-center justify-between gap-4 text-[11px] text-[#666666]">
+            <div>© {new Date().getFullYear()} TechCare. Toàn bộ thông tin được tổng hợp từ các chuyên trang công nghệ uy tín.</div>
+            <div className="flex items-center gap-4">
+              <span>Không có quảng cáo</span>
+              <span>•</span>
+              <span>Hỗ trợ ngoại tuyến</span>
+              <span>•</span>
+              <span>Cập nhật 2026</span>
+            </div>
+          </div>
+        </div>
+      </footer>
+
+      {/* Modals & Toast */}
+      <IssueDetailModal
+        key={selectedIssue?.id ?? 'none'}
+        issue={selectedIssue}
+        onClose={() => setSelectedIssue(null)}
+        isBookmarked={selectedIssue ? bookmarkedIds.includes(selectedIssue.id) : false}
+        onToggleBookmark={() => selectedIssue && handleToggleBookmark(selectedIssue.id)}
+        onVoteHelpful={(id) => handleVoteHelpful(id)}
+        hasVotedHelpful={selectedIssue ? votedHelpfulIds.includes(selectedIssue.id) : false}
+        onShowToast={(msg) => setToastMessage(msg)}
+        canDelete={selectedIssue ? canDeleteIssue(selectedIssue, currentUser) : false}
+        canModerate={canModerateIssues(currentUser)}
+        onDeleteIssue={handleDeleteIssue}
+        onModerateIssue={handleModerateIssue}
+      />
+
       <AddIssueModal
         isOpen={isAddModalOpen}
         onClose={() => setIsAddModalOpen(false)}
-        onAddIssue={handleAddIssue}
+        onAddIssue={handleAddNewIssue}
+        currentUser={currentUser}
+        onRequestLogin={() => {
+          setAuthPromptReason('Đăng nhập để gửi đóng góp mới (AI sẽ tự động duyệt sau khi gửi).');
+          setIsAuthModalOpen(true);
+        }}
+      />
+
+      <CameraDiagnoseModal
+        isOpen={isScannerOpen}
+        onClose={() => setIsScannerOpen(false)}
+        issues={feedIssues}
+        onOpenModuleToFix={(issue) => {
+          setIsScannerOpen(false);
+          setSelectedIssue(issue);
+          setToastMessage(`Đã mở mô-đun "${issue.title}" để bạn thực hiện khắc phục.`);
+        }}
+        onSaveAndOpenModule={async (newIssue) => {
+          if (currentUser) {
+            const res = await handleAddNewIssue(newIssue);
+            if (res.ok) {
+              setIsScannerOpen(false);
+              return;
+            }
+          }
+          setIssues((prev) => [newIssue, ...prev]);
+          setIsScannerOpen(false);
+          setSelectedIssue(newIssue);
+          setToastMessage('Đã tạo mô-đun mới từ đề xuất của Gemini và mở hướng dẫn khắc phục.');
+        }}
+      />
+
+      <AuthModal
+        isOpen={isAuthModalOpen}
+        onClose={() => setIsAuthModalOpen(false)}
+        onAuthSuccess={handleAuthSuccess}
+        promptReason={authPromptReason}
+      />
+
+      <AdminModerationModal
+        isOpen={isAdminModalOpen && canModerateIssues(currentUser)}
+        onClose={() => setIsAdminModalOpen(false)}
+        issues={issues}
+        adminEmail={currentUser?.email || DEFAULT_ADMIN_EMAIL}
+        onModerate={handleModerateIssue}
+        onDelete={handleDeleteIssue}
+        onInspectIssue={(issue) => {
+          setIsAdminModalOpen(false);
+          setSelectedIssue(issue);
+        }}
+      />
+
+      <Toast
+        message={toastMessage}
+        onClose={() => setToastMessage(null)}
       />
     </div>
   );

@@ -19,6 +19,8 @@ export interface StepGuide {
   warning?: string;
 }
 
+export type ModerationStatus = 'approved' | 'pending' | 'rejected';
+
 export interface Issue {
   id: string;
   title: string;
@@ -34,9 +36,15 @@ export interface Issue {
   tags: string[];
   sourceUrl?: string;
   author: string;
+  authorEmail?: string;
+  authorId?: string;
   createdAt: string;
   helpfulCount: number;
   isUserSubmitted?: boolean;
+  moderationStatus?: ModerationStatus;
+  moderationReason?: string;
+  moderatedBy?: 'ai' | 'admin' | 'system';
+  moderatedAt?: string;
 }
 
 export interface IssueFilterOptions {
