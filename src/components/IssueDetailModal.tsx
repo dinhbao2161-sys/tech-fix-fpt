@@ -15,9 +15,7 @@ import {
   Monitor,
   Laptop,
   Cpu,
-  Share2,
-  Trash2,
-  ShieldCheck
+  Share2
 } from 'lucide-react';
 import { Issue } from '../types/issue';
 
@@ -29,10 +27,6 @@ interface IssueDetailModalProps {
   onVoteHelpful: (id: string) => void;
   hasVotedHelpful: boolean;
   onShowToast: (msg: string) => void;
-  canDelete?: boolean;
-  canModerate?: boolean;
-  onDeleteIssue?: (id: string) => Promise<void>;
-  onModerateIssue?: (id: string, status: 'approved' | 'rejected') => Promise<void>;
 }
 
 export const IssueDetailModal: React.FC<IssueDetailModalProps> = ({
@@ -43,15 +37,9 @@ export const IssueDetailModal: React.FC<IssueDetailModalProps> = ({
   onVoteHelpful,
   hasVotedHelpful,
   onShowToast,
-  canDelete = false,
-  canModerate = false,
-  onDeleteIssue,
-  onModerateIssue,
 }) => {
   const [completedSteps, setCompletedSteps] = useState<Record<number, boolean>>({});
   const [copied, setCopied] = useState(false);
-  const [confirmDelete, setConfirmDelete] = useState(false);
-  const [actionBusy, setActionBusy] = useState(false);
 
   if (!issue) return null;
 
@@ -196,72 +184,6 @@ Trích xuất từ Kho Kiến Thức Kỹ Thuật TechCare.`;
             <p className="text-sm text-[#A0A0A0] leading-relaxed font-normal">
               {issue.summary}
             </p>
-            {(issue.moderationReason || canModerate || canDelete) && (issue.isUserSubmitted || canDelete) && (
-              <div className="pt-2 flex flex-wrap items-center justify-between gap-2">
-                {issue.moderationReason && (
-                  <div className="text-xs px-3 py-1.5 rounded-xl bg-[#121212] border border-white/[0.08] text-[#A0A0A0] flex items-center gap-2">
-                    <ShieldCheck className="w-3.5 h-3.5 text-[#F97316] shrink-0" />
-                    <span>{issue.moderationReason}</span>
-                  </div>
-                )}
-                <div className="flex flex-wrap items-center gap-2 ml-auto">
-                  {canModerate && onModerateIssue && issue.moderationStatus !== 'approved' && (
-                    <button
-                      type="button"
-                      disabled={actionBusy}
-                      onClick={async () => {
-                        setActionBusy(true);
-                        try {
-                          await onModerateIssue(issue.id, 'approved');
-                        } finally {
-                          setActionBusy(false);
-                        }
-                      }}
-                      className="px-3 py-1.5 rounded-xl bg-emerald-500/20 border border-emerald-500/40 text-xs font-semibold text-emerald-300 hover:bg-emerald-500/30 cursor-pointer"
-                    >
-                      Admin duyệt bài
-                    </button>
-                  )}
-                  {canDelete && onDeleteIssue && (
-                    confirmDelete ? (
-                      <div className="flex items-center gap-1.5">
-                        <button
-                          type="button"
-                          disabled={actionBusy}
-                          onClick={async () => {
-                            setActionBusy(true);
-                            try {
-                              await onDeleteIssue(issue.id);
-                            } finally {
-                              setActionBusy(false);
-                            }
-                          }}
-                          className="px-3 py-1.5 rounded-xl bg-[#EF4444] text-[#FFFFFF] text-xs font-bold hover:bg-[#DC2626] cursor-pointer"
-                        >
-                          Xác nhận xóa
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setConfirmDelete(false)}
-                          className="px-2.5 py-1.5 rounded-xl bg-[#121212] border border-white/[0.1] text-xs text-[#A0A0A0] hover:text-[#FFFFFF] cursor-pointer"
-                        >
-                          Hủy
-                        </button>
-                      </div>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={() => setConfirmDelete(true)}
-                        className="px-3 py-1.5 rounded-xl bg-[#EF4444]/15 border border-[#EF4444]/35 text-xs font-semibold text-[#EF4444] hover:bg-[#EF4444]/25 flex items-center gap-1.5 cursor-pointer"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                        <span>Xóa bài</span>
-                      </button>
-                    )
-                  )}
-                </div>
-              </div>
-            )}
           </div>
 
           {/* Quick Metrics Bar */}

@@ -106,23 +106,9 @@ export const IssueCard: React.FC<IssueCardProps> = ({
               {getPlatformName(issue.platform)}
             </span>
             {issue.isUserSubmitted && (
-              <span
-                className={`text-[10px] font-mono tracking-wider uppercase px-2 py-0.5 rounded flex items-center gap-1 border ${
-                  issue.moderationStatus === 'rejected'
-                    ? 'bg-[#EF4444]/10 text-[#EF4444] border-[#EF4444]/30'
-                    : issue.moderationStatus === 'pending'
-                      ? 'bg-amber-500/10 text-amber-400 border-amber-500/30'
-                      : 'bg-[#F97316]/10 text-[#F97316] border-[#F97316]/25'
-                }`}
-              >
+              <span className="text-[10px] font-mono tracking-wider uppercase px-2 py-0.5 rounded flex items-center gap-1 border bg-[#F97316]/10 text-[#F97316] border-[#F97316]/25">
                 <Sparkles className="w-2.5 h-2.5" />
-                {issue.moderationStatus === 'rejected'
-                  ? 'Bị ẩn'
-                  : issue.moderationStatus === 'pending'
-                    ? 'Chờ duyệt'
-                    : issue.moderatedBy === 'admin'
-                      ? 'Admin duyệt'
-                      : 'AI đã duyệt'}
+                Cộng đồng
               </span>
             )}
           </div>

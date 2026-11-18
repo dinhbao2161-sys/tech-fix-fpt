@@ -1,6 +1,6 @@
 export type Platform = 'all' | 'iphone' | 'android' | 'windows' | 'mac' | 'hardware';
 
-export type Category = 
+export type Category =
   | 'all'
   | 'system'     // Hệ thống & Khởi động
   | 'screen'     // Màn hình & Cảm ứng
@@ -19,8 +19,6 @@ export interface StepGuide {
   warning?: string;
 }
 
-export type ModerationStatus = 'approved' | 'pending' | 'rejected';
-
 export interface Issue {
   id: string;
   title: string;
@@ -36,15 +34,9 @@ export interface Issue {
   tags: string[];
   sourceUrl?: string;
   author: string;
-  authorEmail?: string;
-  authorId?: string;
   createdAt: string;
   helpfulCount: number;
   isUserSubmitted?: boolean;
-  moderationStatus?: ModerationStatus;
-  moderationReason?: string;
-  moderatedBy?: 'ai' | 'admin' | 'system';
-  moderatedAt?: string;
 }
 
 export interface IssueFilterOptions {

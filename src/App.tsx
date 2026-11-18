@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { 
-  Sparkles, 
-  ShieldCheck, 
+import {
+  Sparkles,
+  ShieldCheck,
   AlertCircle,
   Plus,
   Camera
@@ -13,25 +13,14 @@ import { IssueCard } from './components/IssueCard';
 import { IssueDetailModal } from './components/IssueDetailModal';
 import { AddIssueModal } from './components/AddIssueModal';
 import { CameraDiagnoseModal } from './components/CameraDiagnoseModal';
-import { AuthModal } from './components/AuthModal';
-import { AdminModerationModal } from './components/AdminModerationModal';
 import { Toast } from './components/Toast';
 
 import { Issue, Platform, Category, Severity } from './types/issue';
-import { AuthUser } from './types/auth';
 import { DEFAULT_ISSUES } from './data/defaultIssues';
 import { filterIssues } from './utils/filterIssues';
-import { apiFetch, setStoredSessionToken } from './utils/apiClient';
-import { firebaseSignOut } from './utils/firebaseAuth';
-import {
-  DEFAULT_ADMIN_EMAIL,
-  canDeleteIssue,
-  canModerateIssues,
-} from './utils/moderation';
 
 export default function App() {
-  // 1. Auth & Issues State (Loaded cleanly with DEFAULT_ISSUES fallback then synced from server)
-  const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
+  // 1. Issues State (Loaded with DEFAULT_ISSUES fallback then synced from server)
   const [issues, setIssues] = useState<Issue[]>(DEFAULT_ISSUES);
 
   // 2. Bookmarks State
@@ -67,16 +56,11 @@ export default function App() {
   const [selectedIssue, setSelectedIssue] = useState<Issue | null>(null);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isScannerOpen, setIsScannerOpen] = useState(false);
-  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
-  const [authPromptReason, setAuthPromptReason] = useState<string | null>(null);
-  const [isAdminModalOpen, setIsAdminModalOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
-  const loadIssuesFromServer = useCallback(async (userOverride?: AuthUser | null) => {
-    const activeUser = userOverride !== undefined ? userOverride : currentUser;
-    const url = activeUser?.role === 'admin' ? '/api/issues?scope=all' : '/api/issues';
+  const loadIssuesFromServer = useCallback(async () => {
     try {
-      const res = await apiFetch(url);
+      const res = await fetch('/api/issues');
       if (!res.ok) return;
       const data = (await res.json()) as { issues?: Issue[] };
       if (Array.isArray(data.issues)) {
@@ -85,31 +69,11 @@ export default function App() {
     } catch {
       // keep fallback issues if offline
     }
-  }, [currentUser]);
-
-  // Initial auth + issues sync
-  useEffect(() => {
-    let active = true;
-    (async () => {
-      try {
-        const meRes = await apiFetch('/api/auth/me');
-        const meData = meRes.ok ? ((await meRes.json()) as { user?: AuthUser | null }) : { user: null };
-        const user = meData.user ?? null;
-        if (active) {
-          setCurrentUser(user);
-          await loadIssuesFromServer(user);
-        }
-      } catch {
-        if (active) {
-          await loadIssuesFromServer(null);
-        }
-      }
-    })();
-    return () => {
-      active = false;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    loadIssuesFromServer();
+  }, [loadIssuesFromServer]);
 
   // Auto-dismiss toast
   useEffect(() => {
@@ -136,48 +100,27 @@ export default function App() {
     }
   }, [votedHelpfulIds]);
 
-  // Issues shown in the main browse grid (approved items + current user's own flagged/pending items)
-  const feedIssues = useMemo(() => {
-    return issues.filter((issue) => {
-      const status = issue.moderationStatus ?? 'approved';
-      if (status === 'approved') return true;
-      if (!currentUser) return false;
-      return Boolean(
-        (issue.authorId && issue.authorId === currentUser.id) ||
-          (issue.authorEmail &&
-            issue.authorEmail.toLowerCase() === currentUser.email.toLowerCase())
-      );
-    });
-  }, [issues, currentUser]);
-
-  const pendingModerationCount = useMemo(() => {
-    if (!canModerateIssues(currentUser)) return 0;
-    return issues.filter(
-      (i) => i.moderationStatus === 'pending' || i.moderationStatus === 'rejected'
-    ).length;
-  }, [issues, currentUser]);
-
   // Platform counts calculation
   const platformCounts = useMemo(() => {
     const counts: Record<Platform, number> = {
-      all: feedIssues.length,
+      all: issues.length,
       iphone: 0,
       android: 0,
       windows: 0,
       mac: 0,
       hardware: 0,
     };
-    for (const issue of feedIssues) {
+    for (const issue of issues) {
       if (counts[issue.platform] !== undefined) {
         counts[issue.platform]++;
       }
     }
     return counts;
-  }, [feedIssues]);
+  }, [issues]);
 
   // Filtered issues list
   const filteredIssues = useMemo(() => {
-    return filterIssues(feedIssues, {
+    return filterIssues(issues, {
       query: searchQuery,
       platform: currentPlatform,
       category: currentCategory,
@@ -185,7 +128,7 @@ export default function App() {
       onlyBookmarked: showOnlyBookmarks,
       bookmarkedIds,
     });
-  }, [feedIssues, searchQuery, currentPlatform, currentCategory, currentSeverity, showOnlyBookmarks, bookmarkedIds]);
+  }, [issues, searchQuery, currentPlatform, currentCategory, currentSeverity, showOnlyBookmarks, bookmarkedIds]);
 
   // Bookmark toggle
   const handleToggleBookmark = (id: string, e?: React.MouseEvent) => {
@@ -211,7 +154,7 @@ export default function App() {
     setToastMessage('Cảm ơn bạn đã phản hồi đánh giá hữu ích!');
 
     try {
-      const res = await apiFetch(`/api/issues/${encodeURIComponent(id)}/helpful`, {
+      const res = await fetch(`/api/issues/${encodeURIComponent(id)}/helpful`, {
         method: 'POST',
       });
       if (res.ok) {
@@ -227,112 +170,27 @@ export default function App() {
     }
   };
 
-  // Add new issue with server-side Gemini AI moderation
+  // Add new issue openly without login or AI moderation
   const handleAddNewIssue = async (newIssue: Issue): Promise<{ ok: boolean; error?: string }> => {
     try {
-      const res = await apiFetch('/api/issues', {
+      const res = await fetch('/api/issues', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(newIssue),
       });
       const data = (await res.json()) as { issue?: Issue; error?: string };
       if (!res.ok || !data.issue) {
-        if (res.status === 401) {
-          setAuthPromptReason('Vui lòng đăng nhập để đóng góp giải pháp mới.');
-          setIsAuthModalOpen(true);
-        }
         return { ok: false, error: data.error || 'Không thể lưu đóng góp.' };
       }
 
       const savedIssue = data.issue;
       setIssues((prev) => [savedIssue, ...prev.filter((i) => i.id !== savedIssue.id)]);
-      if (savedIssue.moderationStatus === 'approved') {
-        setSelectedIssue(savedIssue);
-        setToastMessage('AI đã duyệt và xuất bản giải pháp mới thành công!');
-      } else {
-        setToastMessage(
-          savedIssue.moderationReason ||
-            'Bài viết chưa đạt kiểm duyệt tự động (18+/nhạy cảm) và đã chuyển tới Admin xem xét.'
-        );
-      }
+      setSelectedIssue(savedIssue);
+      setToastMessage('Đã xuất bản giải pháp mới lên cộng đồng TechCare!');
       return { ok: true };
     } catch {
       return { ok: false, error: 'Lỗi kết nối máy chủ khi gửi bài.' };
     }
-  };
-
-  const handleModerateIssue = async (id: string, status: 'approved' | 'rejected') => {
-    try {
-      const res = await apiFetch(`/api/issues/${encodeURIComponent(id)}/moderate`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status }),
-      });
-      const data = (await res.json()) as { issue?: Issue; error?: string };
-      if (!res.ok || !data.issue) {
-        setToastMessage(data.error || 'Không thể cập nhật trạng thái duyệt.');
-        return;
-      }
-      const updated = data.issue;
-      setIssues((prev) => prev.map((iss) => (iss.id === updated.id ? updated : iss)));
-      if (selectedIssue?.id === updated.id) {
-        setSelectedIssue(updated);
-      }
-      setToastMessage(
-        status === 'approved'
-          ? 'Admin đã duyệt bài viết hiển thị công khai.'
-          : 'Admin đã từ chối / ẩn bài viết này.'
-      );
-    } catch {
-      setToastMessage('Lỗi kết nối khi duyệt bài viết.');
-    }
-  };
-
-  const handleDeleteIssue = async (id: string) => {
-    try {
-      const res = await apiFetch(`/api/issues/${encodeURIComponent(id)}`, {
-        method: 'DELETE',
-      });
-      const data = (await res.json()) as { ok?: boolean; error?: string };
-      if (!res.ok) {
-        setToastMessage(data.error || 'Không thể xóa bài viết.');
-        return;
-      }
-      setIssues((prev) => prev.filter((iss) => iss.id !== id));
-      if (selectedIssue?.id === id) {
-        setSelectedIssue(null);
-      }
-      setToastMessage('Đã xóa bài viết khỏi hệ thống.');
-    } catch {
-      setToastMessage('Lỗi kết nối khi xóa bài viết.');
-    }
-  };
-
-  const handleAuthSuccess = async (user: AuthUser) => {
-    setCurrentUser(user);
-    setAuthPromptReason(null);
-    await loadIssuesFromServer(user);
-    setToastMessage(
-      user.role === 'admin'
-        ? `Chào Admin ${user.name} (${user.email})! Bạn có toàn quyền duyệt và xóa bài.`
-        : `Đăng nhập thành công với tài khoản ${user.name}!`
-    );
-  };
-
-  const handleLogout = async () => {
-    try {
-      await Promise.all([
-        apiFetch('/api/auth/logout', { method: 'POST' }),
-        firebaseSignOut(),
-      ]);
-    } catch {
-      // ignore
-    }
-    setStoredSessionToken(null);
-    setCurrentUser(null);
-    setIsAdminModalOpen(false);
-    await loadIssuesFromServer(null);
-    setToastMessage('Đã đăng xuất khỏi tài khoản.');
   };
 
   return (
@@ -349,14 +207,6 @@ export default function App() {
         bookmarkCount={bookmarkedIds.length}
         showOnlyBookmarks={showOnlyBookmarks}
         onToggleBookmarks={() => setShowOnlyBookmarks(!showOnlyBookmarks)}
-        currentUser={currentUser}
-        onOpenAuthModal={() => {
-          setAuthPromptReason(null);
-          setIsAuthModalOpen(true);
-        }}
-        onLogout={handleLogout}
-        onOpenAdminModal={() => setIsAdminModalOpen(true)}
-        pendingModerationCount={pendingModerationCount}
       />
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 space-y-10">
@@ -395,7 +245,7 @@ export default function App() {
           {/* Quick Metrics Bar */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-8 pt-6 border-t border-white/[0.08]">
             <div className="p-3.5 rounded-xl bg-[#0A0A0A] border border-white/[0.06]">
-              <div className="text-xl sm:text-2xl font-bold font-mono text-[#F97316]">{feedIssues.length}</div>
+              <div className="text-xl sm:text-2xl font-bold font-mono text-[#F97316]">{issues.length}</div>
               <div className="text-xs text-[#A0A0A0] mt-0.5">Sự cố đã biên tập</div>
             </div>
             <div className="p-3.5 rounded-xl bg-[#0A0A0A] border border-white/[0.06]">
@@ -419,7 +269,7 @@ export default function App() {
             value={searchQuery}
             onChange={setSearchQuery}
             resultCount={filteredIssues.length}
-            totalCount={feedIssues.length}
+            totalCount={issues.length}
           />
         </section>
 
@@ -436,7 +286,7 @@ export default function App() {
           />
         </section>
 
-        {/* 5. Active Filters Notice (if bookmarks or search active) */}
+        {/* 5. Active Filters Notice (if bookmarks active) */}
         {showOnlyBookmarks && (
           <div className="flex items-center justify-between p-4 rounded-xl bg-[#0E0E0E] border border-[#F97316]/30 text-xs">
             <div className="flex items-center gap-2 text-[#FFFFFF]">
@@ -588,64 +438,33 @@ export default function App() {
         onVoteHelpful={(id) => handleVoteHelpful(id)}
         hasVotedHelpful={selectedIssue ? votedHelpfulIds.includes(selectedIssue.id) : false}
         onShowToast={(msg) => setToastMessage(msg)}
-        canDelete={selectedIssue ? canDeleteIssue(selectedIssue, currentUser) : false}
-        canModerate={canModerateIssues(currentUser)}
-        onDeleteIssue={handleDeleteIssue}
-        onModerateIssue={handleModerateIssue}
       />
 
       <AddIssueModal
         isOpen={isAddModalOpen}
         onClose={() => setIsAddModalOpen(false)}
         onAddIssue={handleAddNewIssue}
-        currentUser={currentUser}
-        onRequestLogin={() => {
-          setAuthPromptReason('Đăng nhập để gửi đóng góp mới (AI sẽ tự động duyệt sau khi gửi).');
-          setIsAuthModalOpen(true);
-        }}
       />
 
       <CameraDiagnoseModal
         isOpen={isScannerOpen}
         onClose={() => setIsScannerOpen(false)}
-        issues={feedIssues}
+        issues={issues}
         onOpenModuleToFix={(issue) => {
           setIsScannerOpen(false);
           setSelectedIssue(issue);
           setToastMessage(`Đã mở mô-đun "${issue.title}" để bạn thực hiện khắc phục.`);
         }}
         onSaveAndOpenModule={async (newIssue) => {
-          if (currentUser) {
-            const res = await handleAddNewIssue(newIssue);
-            if (res.ok) {
-              setIsScannerOpen(false);
-              return;
-            }
+          const res = await handleAddNewIssue(newIssue);
+          if (res.ok) {
+            setIsScannerOpen(false);
+            return;
           }
           setIssues((prev) => [newIssue, ...prev]);
           setIsScannerOpen(false);
           setSelectedIssue(newIssue);
           setToastMessage('Đã tạo mô-đun mới từ đề xuất của Gemini và mở hướng dẫn khắc phục.');
-        }}
-      />
-
-      <AuthModal
-        isOpen={isAuthModalOpen}
-        onClose={() => setIsAuthModalOpen(false)}
-        onAuthSuccess={handleAuthSuccess}
-        promptReason={authPromptReason}
-      />
-
-      <AdminModerationModal
-        isOpen={isAdminModalOpen && canModerateIssues(currentUser)}
-        onClose={() => setIsAdminModalOpen(false)}
-        issues={issues}
-        adminEmail={currentUser?.email || DEFAULT_ADMIN_EMAIL}
-        onModerate={handleModerateIssue}
-        onDelete={handleDeleteIssue}
-        onInspectIssue={(issue) => {
-          setIsAdminModalOpen(false);
-          setSelectedIssue(issue);
         }}
       />
 

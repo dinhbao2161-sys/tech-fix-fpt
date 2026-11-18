@@ -1,32 +1,25 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { 
   X, 
   Plus, 
   Trash2, 
   Sparkles, 
   AlertCircle,
-  Loader2,
-  LogIn,
-  ShieldCheck
+  Loader2
 } from 'lucide-react';
 import { Issue, StepGuide } from '../types/issue';
-import { AuthUser } from '../types/auth';
 import { validateIssueForm } from '../utils/filterIssues';
 
 interface AddIssueModalProps {
   isOpen: boolean;
   onClose: () => void;
   onAddIssue: (newIssue: Issue) => Promise<{ ok: boolean; error?: string }>;
-  currentUser: AuthUser | null;
-  onRequestLogin: () => void;
 }
 
 export const AddIssueModal: React.FC<AddIssueModalProps> = ({
   isOpen,
   onClose,
   onAddIssue,
-  currentUser,
-  onRequestLogin,
 }) => {
   const [title, setTitle] = useState('');
   const [platform, setPlatform] = useState<'iphone' | 'android' | 'windows' | 'mac' | 'hardware'>('iphone');
@@ -48,12 +41,6 @@ export const AddIssueModal: React.FC<AddIssueModalProps> = ({
   ]);
 
   const [errors, setErrors] = useState<Record<string, string>>({});
-
-  useEffect(() => {
-    if (currentUser && !author.trim()) {
-      setAuthor(currentUser.name);
-    }
-  }, [currentUser, author]);
 
   if (!isOpen) return null;
 
@@ -95,12 +82,6 @@ export const AddIssueModal: React.FC<AddIssueModalProps> = ({
     e.preventDefault();
     setSubmitError(null);
 
-    if (!currentUser) {
-      setSubmitError('Vui lòng đăng nhập để gửi bài đóng góp (AI sẽ tự động duyệt sau khi gửi).');
-      onRequestLogin();
-      return;
-    }
-
     const validation = validateIssueForm({
       title,
       summary,
@@ -141,9 +122,7 @@ export const AddIssueModal: React.FC<AddIssueModalProps> = ({
         ? requiredTools.split(',').map((t) => t.trim()).filter(Boolean)
         : undefined,
       tags: [platform, category, title.toLowerCase().slice(0, 15)],
-      author: author.trim() || currentUser.name || 'Kỹ thuật viên cộng đồng',
-      authorEmail: currentUser.email,
-      authorId: currentUser.id,
+      author: author.trim() || 'Kỹ thuật viên cộng đồng',
       createdAt: new Date().toISOString().split('T')[0],
       helpfulCount: 1,
       isUserSubmitted: true,
@@ -191,7 +170,7 @@ export const AddIssueModal: React.FC<AddIssueModalProps> = ({
                 Đóng Góp Giải Pháp Kỹ Thuật
               </h2>
               <p className="text-xs text-[#A0A0A0]">
-                AI Gemini tự động duyệt ngay nếu không chứa nội dung 18+ hoặc nhạy cảm
+                Chia sẻ kinh nghiệm khắc phục sự cố công nghệ cùng cộng đồng TechCare
               </p>
             </div>
           </div>
@@ -207,34 +186,6 @@ export const AddIssueModal: React.FC<AddIssueModalProps> = ({
 
         {/* Form Body */}
         <form onSubmit={handleSubmit} className="overflow-y-auto px-6 sm:px-8 py-7 space-y-6">
-          {/* Auth / AI Moderation Notice Banner */}
-          {!currentUser ? (
-            <div className="p-4 rounded-2xl bg-[#F97316]/10 border border-[#F97316]/35 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <div className="text-xs text-[#FFFFFF] space-y-0.5">
-                <div className="font-bold text-[#F97316]">Yêu cầu đăng nhập trước khi gửi đóng góp</div>
-                <div className="text-[#A0A0A0]">
-                  Đăng nhập bằng Google hoặc Email để gửi giải pháp. Bản nháp của bạn sẽ được giữ nguyên.
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={onRequestLogin}
-                className="h-9 px-4 rounded-xl bg-[#F97316] hover:bg-[#FB923C] text-[#000000] text-xs font-bold flex items-center gap-1.5 shrink-0 cursor-pointer"
-              >
-                <LogIn className="w-3.5 h-3.5" />
-                <span>Đăng nhập ngay</span>
-              </button>
-            </div>
-          ) : (
-            <div className="p-3.5 rounded-2xl bg-[#121212] border border-white/[0.08] flex items-center gap-2.5 text-xs text-[#A0A0A0]">
-              <ShieldCheck className="w-4 h-4 text-[#F97316] shrink-0" />
-              <span>
-                Đăng với tài khoản <strong className="text-[#FFFFFF]">{currentUser.email}</strong>.
-                Bài viết sẽ được AI kiểm duyệt tự động (chỉ từ chối nội dung 18+ hoặc nhạy cảm).
-              </span>
-            </div>
-          )}
-
           {submitError && (
             <div className="p-3.5 rounded-xl bg-[#EF4444]/10 border border-[#EF4444]/30 text-xs text-[#EF4444] flex items-start gap-2">
               <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
@@ -566,7 +517,7 @@ export const AddIssueModal: React.FC<AddIssueModalProps> = ({
               className="px-6 py-2.5 rounded-xl bg-[#F97316] hover:bg-[#ff8533] text-[#000000] text-xs font-bold tracking-wide transition-all shadow-[0_2px_12px_rgba(249,115,22,0.25)] active:scale-[0.98] disabled:opacity-60 flex items-center gap-2 cursor-pointer"
             >
               {isSubmitting && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-              <span>{isSubmitting ? 'AI đang duyệt bài...' : 'Gửi & AI kiểm duyệt'}</span>
+              <span>{isSubmitting ? 'Đang xuất bản...' : 'Xuất bản giải pháp'}</span>
             </button>
           </div>
         </form>

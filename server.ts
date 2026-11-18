@@ -2,40 +2,20 @@ import 'dotenv/config';
 import express from 'express';
 import type { Request, Response } from 'express';
 import crypto from 'node:crypto';
-import fs from 'node:fs';
 import http from 'node:http';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { GoogleGenAI, ThinkingLevel, Type } from '@google/genai';
-import type { AuthUser } from './src/types/auth.ts';
 import type { Issue } from './src/types/issue.ts';
 import {
-  canDeleteIssue,
-  canModerateIssues,
-  canViewIssuePublicly,
-} from './src/utils/moderation.ts';
-import {
-  createSessionToken,
-  deleteIssueById,
-  findIssueById,
   getAllIssuesMerged,
-  getConfiguredAdminEmail,
   incrementIssueHelpful,
-  loginPasswordUser,
-  moderateContributionWithAI,
-  parseSessionUser,
-  registerPasswordUser,
-  resolveRoleForEmail,
   saveCommunityIssue,
-  signTokenPayload,
-  updateIssueModeration,
-  verifySignedToken,
 } from './server/store.ts';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.PORT) || 3000;
 const isProduction = process.env.NODE_ENV === 'production';
-const SESSION_COOKIE_NAME = 'techcare_session';
 
 interface CatalogItemInput {
   id: string;
@@ -82,94 +62,6 @@ function extractBase64Payload(raw: string, fallbackMime: string): { data: string
   };
 }
 
-function getBaseAppUrl(req: Request): string {
-  const envUrl = process.env.APP_URL?.trim();
-  if (envUrl && envUrl !== 'MY_APP_URL') {
-    return envUrl.replace(/\/+$/, '');
-  }
-  const forwardedProto = (req.headers['x-forwarded-proto'] as string | undefined)?.split(',')[0]?.trim();
-  const proto = forwardedProto || req.protocol || 'http';
-  const host = req.get('host') || `localhost:${PORT}`;
-  return `${proto}://${host}`;
-}
-
-function getGoogleOAuthCredentials(): { clientId: string; clientSecret: string } | null {
-  const clientId = process.env.GOOGLE_CLIENT_ID?.trim();
-  const clientSecret = process.env.GOOGLE_CLIENT_SECRET?.trim();
-  if (!clientId || !clientSecret) return null;
-  return { clientId, clientSecret };
-}
-
-function getFirebaseClientApiKey(): string | null {
-  try {
-    const configPath = path.resolve(__dirname, 'firebase-applet-config.json');
-    if (!fs.existsSync(configPath)) return null;
-    const raw = fs.readFileSync(configPath, 'utf8');
-    const parsed = JSON.parse(raw) as { apiKey?: string };
-    return typeof parsed.apiKey === 'string' && parsed.apiKey.trim()
-      ? parsed.apiKey.trim()
-      : null;
-  } catch {
-    return null;
-  }
-}
-
-function parseCookies(cookieHeader: string | undefined): Record<string, string> {
-  const out: Record<string, string> = {};
-  if (!cookieHeader) return out;
-  for (const part of cookieHeader.split(';')) {
-    const idx = part.indexOf('=');
-    if (idx === -1) continue;
-    const key = part.slice(0, idx).trim();
-    const val = part.slice(idx + 1).trim();
-    if (key) {
-      try {
-        out[key] = decodeURIComponent(val);
-      } catch {
-        out[key] = val;
-      }
-    }
-  }
-  return out;
-}
-
-function extractSessionToken(req: Request): string | null {
-  const authHeader = req.headers.authorization;
-  if (authHeader && authHeader.startsWith('Bearer ')) {
-    const bearer = authHeader.slice(7).trim();
-    if (bearer) return bearer;
-  }
-  const cookies = parseCookies(req.headers.cookie);
-  return cookies[SESSION_COOKIE_NAME] || null;
-}
-
-function getRequestUser(req: Request): AuthUser | null {
-  return parseSessionUser(extractSessionToken(req));
-}
-
-function setSessionCookie(req: Request, res: Response, token: string) {
-  const baseUrl = getBaseAppUrl(req);
-  const isHttps = baseUrl.startsWith('https://') || req.secure;
-  res.cookie(SESSION_COOKIE_NAME, token, {
-    httpOnly: true,
-    secure: isHttps,
-    sameSite: isHttps ? 'none' : 'lax',
-    path: '/',
-    maxAge: 7 * 24 * 60 * 60 * 1000,
-  });
-}
-
-function clearSessionCookie(req: Request, res: Response) {
-  const baseUrl = getBaseAppUrl(req);
-  const isHttps = baseUrl.startsWith('https://') || req.secure;
-  res.clearCookie(SESSION_COOKIE_NAME, {
-    httpOnly: true,
-    secure: isHttps,
-    sameSite: isHttps ? 'none' : 'lax',
-    path: '/',
-  });
-}
-
 async function startServer() {
   const app = express();
   const httpServer = http.createServer(app);
@@ -181,285 +73,12 @@ async function startServer() {
     res.json({ ok: true });
   });
 
-  // --- Authentication Endpoints ---
-  app.get('/api/auth/config', (req: Request, res: Response) => {
-    const creds = getGoogleOAuthCredentials();
-    const firebaseReady = Boolean(getFirebaseClientApiKey());
-    res.json({
-      googleConfigured: Boolean(creds) || firebaseReady,
-      adminEmail: getConfiguredAdminEmail(),
-      adminPasswordConfigured: Boolean(process.env.ADMIN_PASSWORD?.trim()),
-      callbackUrl: `${getBaseAppUrl(req)}/auth/callback`,
-    });
+  // --- Open Community Issues Endpoints (No login or AI moderation required) ---
+  app.get('/api/issues', (_req: Request, res: Response) => {
+    res.json({ issues: getAllIssuesMerged() });
   });
 
-  app.post('/api/auth/google/firebase', async (req: Request, res: Response) => {
-    const firebaseApiKey = getFirebaseClientApiKey();
-    if (!firebaseApiKey) {
-      res.status(503).json({
-        error: 'Chưa cấu hình đăng nhập Google trên máy chủ.',
-      });
-      return;
-    }
-
-    const { idToken } = (req.body ?? {}) as { idToken?: string };
-    if (!idToken || typeof idToken !== 'string' || idToken.length < 20) {
-      res.status(400).json({ error: 'Thiếu mã xác thực Google (ID Token).' });
-      return;
-    }
-
-    try {
-      const lookupRes = await fetch(
-        `https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${encodeURIComponent(firebaseApiKey)}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ idToken }),
-        }
-      );
-
-      if (!lookupRes.ok) {
-        res.status(401).json({
-          error: 'Phiên đăng nhập Google không hợp lệ hoặc đã hết hạn.',
-        });
-        return;
-      }
-
-      const lookupData = (await lookupRes.json()) as {
-        users?: Array<{
-          localId?: string;
-          email?: string;
-          emailVerified?: boolean;
-          displayName?: string;
-          photoUrl?: string;
-          providerUserInfo?: Array<{ providerId?: string }>;
-        }>;
-      };
-
-      const record = lookupData.users?.[0];
-      const hasGoogleProvider = Boolean(
-        record?.providerUserInfo?.some((p) => p.providerId === 'google.com')
-      );
-      if (!record?.email || (!record.emailVerified && !hasGoogleProvider)) {
-        res.status(401).json({
-          error: 'Tài khoản Google chưa được xác minh email hợp lệ.',
-        });
-        return;
-      }
-
-      const email = record.email.trim().toLowerCase();
-      const user: AuthUser = {
-        id: `google-${record.localId || email}`,
-        email,
-        name: record.displayName?.trim() || email.split('@')[0],
-        avatarUrl: record.photoUrl,
-        provider: 'google',
-        role: resolveRoleForEmail(email, true),
-      };
-
-      const sessionToken = createSessionToken(user);
-      setSessionCookie(req, res, sessionToken);
-      res.json({ token: sessionToken, user });
-    } catch {
-      res.status(502).json({
-        error: 'Không thể kết nối máy chủ xác thực Google. Vui lòng thử lại.',
-      });
-    }
-  });
-
-  app.get('/api/auth/me', (req: Request, res: Response) => {
-    const user = getRequestUser(req);
-    res.json({ user });
-  });
-
-  app.get('/api/auth/google/url', (req: Request, res: Response) => {
-    const creds = getGoogleOAuthCredentials();
-    const callbackUrl = `${getBaseAppUrl(req)}/auth/callback`;
-    if (!creds) {
-      res.status(503).json({
-        error: 'Chưa cấu hình GOOGLE_CLIENT_ID và GOOGLE_CLIENT_SECRET trong Settings > Secrets.',
-        callbackUrl,
-      });
-      return;
-    }
-
-    const state = signTokenPayload({ nonce: crypto.randomBytes(16).toString('hex') }, 600);
-    const params = new URLSearchParams({
-      client_id: creds.clientId,
-      redirect_uri: callbackUrl,
-      response_type: 'code',
-      scope: 'openid email profile',
-      access_type: 'online',
-      prompt: 'select_account',
-      state,
-    });
-    res.json({ url: `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}` });
-  });
-
-  const handleGoogleCallback = async (req: Request, res: Response) => {
-    const creds = getGoogleOAuthCredentials();
-    const { code, state, error: oauthError } = req.query as Record<string, string | undefined>;
-
-    const renderResultPage = (payload: { type: string; token?: string; user?: AuthUser; error?: string }) => {
-      const serialized = JSON.stringify(payload).replace(/</g, '\\u003c');
-      const statusText = payload.error
-        ? `Đăng nhập thất bại: ${payload.error}`
-        : 'Đăng nhập Google thành công. Cửa sổ sẽ tự động đóng...';
-      res.status(payload.error ? 400 : 200).send(`<!doctype html>
-<html lang="vi">
-<head><meta charset="utf-8"><title>TechCare Google Sign-In</title></head>
-<body style="background:#000;color:#fff;font-family:sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;padding:24px;text-align:center;">
-  <div>
-    <p style="font-size:15px;">${statusText.replace(/</g, '&lt;')}</p>
-  </div>
-  <script>
-    (function() {
-      var data = ${serialized};
-      if (window.opener) {
-        window.opener.postMessage(data, '*');
-        window.close();
-      } else if (!data.error) {
-        window.location.href = '/';
-      }
-    })();
-  </script>
-</body>
-</html>`);
-    };
-
-    if (oauthError) {
-      renderResultPage({ type: 'OAUTH_AUTH_ERROR', error: oauthError });
-      return;
-    }
-    if (!creds) {
-      renderResultPage({ type: 'OAUTH_AUTH_ERROR', error: 'Google OAuth chưa được cấu hình.' });
-      return;
-    }
-    if (!code || !state || !verifySignedToken(state)) {
-      renderResultPage({ type: 'OAUTH_AUTH_ERROR', error: 'Phiên xác thực OAuth không hợp lệ hoặc đã hết hạn.' });
-      return;
-    }
-
-    try {
-      const callbackUrl = `${getBaseAppUrl(req)}/auth/callback`;
-      const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: new URLSearchParams({
-          code,
-          client_id: creds.clientId,
-          client_secret: creds.clientSecret,
-          redirect_uri: callbackUrl,
-          grant_type: 'authorization_code',
-        }),
-      });
-
-      if (!tokenRes.ok) {
-        renderResultPage({ type: 'OAUTH_AUTH_ERROR', error: 'Không thể đổi mã xác thực với Google.' });
-        return;
-      }
-
-      const tokenData = (await tokenRes.json()) as { access_token?: string };
-      if (!tokenData.access_token) {
-        renderResultPage({ type: 'OAUTH_AUTH_ERROR', error: 'Không nhận được Access Token từ Google.' });
-        return;
-      }
-
-      const userInfoRes = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
-        headers: { Authorization: `Bearer ${tokenData.access_token}` },
-      });
-      if (!userInfoRes.ok) {
-        renderResultPage({ type: 'OAUTH_AUTH_ERROR', error: 'Không thể lấy thông tin tài khoản Google.' });
-        return;
-      }
-
-      const profile = (await userInfoRes.json()) as {
-        sub?: string;
-        email?: string;
-        email_verified?: boolean;
-        name?: string;
-        picture?: string;
-      };
-
-      if (!profile.email || !profile.email_verified) {
-        renderResultPage({
-          type: 'OAUTH_AUTH_ERROR',
-          error: 'Tài khoản Google chưa xác minh địa chỉ email.',
-        });
-        return;
-      }
-
-      const email = profile.email.trim().toLowerCase();
-      const user: AuthUser = {
-        id: `google-${profile.sub || email}`,
-        email,
-        name: profile.name?.trim() || email.split('@')[0],
-        avatarUrl: profile.picture,
-        provider: 'google',
-        role: resolveRoleForEmail(email, true),
-      };
-
-      const sessionToken = createSessionToken(user);
-      setSessionCookie(req, res, sessionToken);
-      renderResultPage({ type: 'OAUTH_AUTH_SUCCESS', token: sessionToken, user });
-    } catch {
-      renderResultPage({ type: 'OAUTH_AUTH_ERROR', error: 'Lỗi kết nối máy chủ Google OAuth.' });
-    }
-  };
-
-  app.get(['/auth/callback', '/auth/callback/'], handleGoogleCallback);
-
-  app.post('/api/auth/register', (req: Request, res: Response) => {
-    const { email, password, name } = (req.body ?? {}) as {
-      email?: string;
-      password?: string;
-      name?: string;
-    };
-    const result = registerPasswordUser(email || '', password || '', name || '');
-    if (result.error || !result.user) {
-      res.status(400).json({ error: result.error || 'Không thể đăng ký tài khoản.' });
-      return;
-    }
-    const token = createSessionToken(result.user);
-    setSessionCookie(req, res, token);
-    res.status(201).json({ token, user: result.user });
-  });
-
-  app.post('/api/auth/login', (req: Request, res: Response) => {
-    const { email, password } = (req.body ?? {}) as { email?: string; password?: string };
-    const result = loginPasswordUser(email || '', password || '');
-    if (result.error || !result.user) {
-      res.status(401).json({ error: result.error || 'Đăng nhập thất bại.' });
-      return;
-    }
-    const token = createSessionToken(result.user);
-    setSessionCookie(req, res, token);
-    res.json({ token, user: result.user });
-  });
-
-  app.post('/api/auth/logout', (req: Request, res: Response) => {
-    clearSessionCookie(req, res);
-    res.json({ ok: true });
-  });
-
-  // --- Issues, AI Moderation & Admin Endpoints ---
-  app.get('/api/issues', (req: Request, res: Response) => {
-    const user = getRequestUser(req);
-    const includeAll = req.query.scope === 'all' && canModerateIssues(user);
-    const all = getAllIssuesMerged();
-    const visible = includeAll ? all : all.filter((issue) => canViewIssuePublicly(issue, user));
-    res.json({ issues: visible });
-  });
-
-  app.post('/api/issues', async (req: Request, res: Response) => {
-    const user = getRequestUser(req);
-    if (!user) {
-      res.status(401).json({
-        error: 'Vui lòng đăng nhập tài khoản trước khi đóng góp giải pháp.',
-      });
-      return;
-    }
-
+  app.post('/api/issues', (req: Request, res: Response) => {
     const payload = (req.body ?? {}) as Partial<Issue>;
     const title = typeof payload.title === 'string' ? payload.title.trim() : '';
     const summary = typeof payload.summary === 'string' ? payload.summary.trim() : '';
@@ -509,17 +128,7 @@ async function startServer() {
     const authorName =
       typeof payload.author === 'string' && payload.author.trim()
         ? payload.author.trim().slice(0, 60)
-        : user.name;
-
-    const moderation = await moderateContributionWithAI(getGeminiClient(), {
-      title,
-      summary,
-      symptoms,
-      causes,
-      steps,
-      requiredTools,
-      author: authorName,
-    });
+        : 'Kỹ thuật viên cộng đồng';
 
     const newIssue: Issue = {
       id: `custom-${Date.now()}-${crypto.randomBytes(3).toString('hex')}`,
@@ -540,74 +149,13 @@ async function startServer() {
         ? payload.tags.slice(0, 6).map((t) => String(t).trim()).filter(Boolean)
         : [platform, category],
       author: authorName,
-      authorEmail: user.email,
-      authorId: user.id,
       createdAt: new Date().toISOString().split('T')[0],
       helpfulCount: 1,
       isUserSubmitted: true,
-      moderationStatus: moderation.status,
-      moderationReason: moderation.reason,
-      moderatedBy: 'ai',
-      moderatedAt: new Date().toISOString(),
     };
 
     saveCommunityIssue(newIssue);
     res.status(201).json({ issue: newIssue });
-  });
-
-  app.patch('/api/issues/:id/moderate', (req: Request, res: Response) => {
-    const user = getRequestUser(req);
-    if (!canModerateIssues(user)) {
-      res.status(403).json({
-        error: 'Chỉ tài khoản Quản trị viên (Admin) mới có quyền duyệt hoặc từ chối bài viết.',
-      });
-      return;
-    }
-
-    const id = req.params.id;
-    const { status, reason } = (req.body ?? {}) as { status?: string; reason?: string };
-    if (status !== 'approved' && status !== 'rejected') {
-      res.status(400).json({ error: 'Trạng thái duyệt không hợp lệ.' });
-      return;
-    }
-
-    const defaultReason =
-      status === 'approved'
-        ? `Đã được Admin (${user?.email}) phê duyệt hiển thị.`
-        : `Đã bị Admin (${user?.email}) từ chối hiển thị.`;
-    const updated = updateIssueModeration(
-      id,
-      status,
-      typeof reason === 'string' && reason.trim() ? reason.trim() : defaultReason,
-      'admin'
-    );
-    if (!updated) {
-      res.status(404).json({ error: 'Không tìm thấy bài viết cần duyệt.' });
-      return;
-    }
-    res.json({ issue: updated });
-  });
-
-  app.delete('/api/issues/:id', (req: Request, res: Response) => {
-    const user = getRequestUser(req);
-    if (!user) {
-      res.status(401).json({ error: 'Vui lòng đăng nhập để thực hiện thao tác này.' });
-      return;
-    }
-    const existing = findIssueById(req.params.id);
-    if (!existing) {
-      res.status(404).json({ error: 'Không tìm thấy bài viết cần xóa.' });
-      return;
-    }
-    if (!canDeleteIssue(existing, user)) {
-      res.status(403).json({
-        error: 'Bạn không có quyền xóa bài viết này. Chỉ Admin mới có thể xóa mọi bài đóng góp.',
-      });
-      return;
-    }
-
-    deleteIssueById(existing.id);
-    res.json({ ok: true, id: existing.id });
   });
 
   app.post('/api/issues/:id/helpful', (req: Request, res: Response) => {
@@ -619,6 +167,7 @@ async function startServer() {
     res.json({ helpfulCount: nextCount });
   });
 
+  // --- Gemini Camera Vision Diagnostic Scanner ---
   app.post('/api/diagnose-image', async (req: Request, res: Response) => {
     const body = (req.body ?? {}) as DiagnoseRequestBody;
 
